@@ -82,7 +82,7 @@ export default class TGAImage {
     throw new Error(`Color map type ${this.colorMapType} is not supported`);
   }
 
-  private getPixelColor( x: number, y: number): Color | null {
+  private getPixelColor( x: number, y: number): Color {
     const pixelSize = this.colorMapType === 0 ? this.pixelSize : this.colorMapPixelSize;
     const offset = this.getPixelOffset(x, y);
 
@@ -97,10 +97,8 @@ export default class TGAImage {
       }
 
       default:
-        break;
+        throw new Error(`Pixel Size (${this.pixelSize}) is not supported!`);
     }
-
-    return null;
   }
 
   private decodeRunLengthEncoding() {
@@ -156,12 +154,6 @@ export default class TGAImage {
     for (let y = 0; y < this.imageHeight; ++y) {
       for (let x = 0; x < this.imageWidth; ++x) {
         const color = this.getPixelColor(x, y);
-
-        if (!color) {
-          alert('Pixel size is not supported');
-          return;
-        }
-
         const canvasOffset = y * this.imageWidth * 4 + x * 4;
 
         imageData.data[canvasOffset] = color.red;
