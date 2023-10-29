@@ -25,3 +25,4 @@ Grayscale and RLE grayscale are not supported yet.
 
 - [Truvision TGA on Wikipedia](https://en.wikipedia.org/wiki/Truevision_TGA)
 - [Creating Image Files (written by Paul Bourke)](http://www.paulbourke.net/dataformats/tga/)
+- [TGA Files - University of South Carolina](https://people.math.sc.edu/Burkardt/data/tga/tga.html)
