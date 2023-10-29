@@ -9,6 +9,9 @@
     "start": "esbuild src/index.ts --outdir=www/js --watch --bundle --target=chrome118 --servedir=www"
   },
   "devDependencies": {
-    "esbuild": "^0.19.5"
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "esbuild": "^0.19.5",
+    "eslint-config-airbnb-typescript": "^17.1.0"
   }
 }
