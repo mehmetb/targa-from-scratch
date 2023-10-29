@@ -7,3 +7,10 @@ export enum ImageType {
   RUN_LENGTH_ENCODED_TRUE_COLOR = 10,
   RUN_LENGTH_ENCODED_GRAY_SCALE = 11,
 }
+
+export type Color = {
+  red: number;
+  green: number;
+  blue: number;
+  alpha: number;
+}

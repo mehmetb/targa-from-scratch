@@ -1,4 +1,4 @@
-import { ImageType } from './types';
+import { ImageType, Color } from './types';
 import { decodeRunLengthEncoding } from './RLE-Decoder';
 
 export default class TGAImage {
@@ -22,67 +22,19 @@ export default class TGAImage {
   constructor(arrayBuffer: ArrayBuffer) {
     this.arrayBuffer = arrayBuffer;
     this.dataView = new DataView(arrayBuffer);
-    this.colorMapType = this.getColorMapType();
-    this.imageType = this.getImageType();
-    this.xOrigin = this.getXOrigin();
-    this.yOrigin = this.getYOrigin();
-    this.imageWidth = this.getImageWidth();
-    this.imageHeight = this.getImageHeight();
-    this.pixelSize = this.getPixelSize();
-    this.imageDescriptor = this.getImageDescriptor();
-    this.imageIdentificationFieldLength = this.getImageIdentificationFieldLength();
-    this.colorMapOrigin = this.getColorMapOrigin();
-    this.colorMapLength = this.getColorMapLength();
-    this.colorMapPixelSize = this.getColorMapPixelSize();
+    this.imageIdentificationFieldLength = this.dataView.getUint8(0);
+    this.colorMapType = this.dataView.getUint8(1);
+    this.imageType = this.dataView.getUint8(2);
+    this.colorMapOrigin = this.dataView.getUint16(3, true);
+    this.colorMapLength = this.dataView.getUint16(5, true);
+    this.colorMapPixelSize = this.dataView.getUint8(7) / 8;
+    this.xOrigin = this.dataView.getUint16(8);
+    this.yOrigin = this.dataView.getUint16(10);
+    this.imageWidth = this.dataView.getUint16(12, true);
+    this.imageHeight = this.dataView.getUint16(14, true);
+    this.pixelSize = this.dataView.getUint8(16) / 8;
+    this.imageDescriptor = this.dataView.getUint8(17);
     this.imageDataFieldOffset = this.getImageDataFieldOffset();
-  }
-
-  private getColorMapType(): number {
-    return this.dataView.getUint8(1);
-  }
-
-  private getColorMapOrigin(): number {
-    return this.dataView.getUint16(3, true);
-  }
-
-  private getColorMapLength(): number {
-    return this.dataView.getUint16(5, true);
-  }
-
-  private getColorMapPixelSize(): number {
-    return this.dataView.getUint8(7) / 8;
-  }
-
-  private getImageType(): ImageType {
-    return this.dataView.getUint8(2);
-  }
-
-  private getXOrigin(): number {
-    return this.dataView.getUint16(8);
-  }
-
-  private getYOrigin(): number {
-    return this.dataView.getUint16(10);
-  }
-
-  private getImageWidth(): number {
-    return this.dataView.getUint16(12, true);
-  }
-
-  private getImageHeight(): number {
-    return this.dataView.getUint16(14, true);
-  }
-
-  private getPixelSize(): number {
-    return this.dataView.getUint8(16) / 8;
-  }
-
-  private getImageDescriptor(): number {
-    return this.dataView.getUint8(17);
-  }
-
-  private getImageIdentificationFieldLength(): number {
-    return this.dataView.getUint8(0);
   }
 
   private getImageDataFieldOffset(): number {
@@ -91,16 +43,10 @@ export default class TGAImage {
         return 18 + this.imageIdentificationFieldLength;
 
       case 1:
-        return (
-          18 +
-          this.imageIdentificationFieldLength +
-          this.colorMapLength * this.colorMapPixelSize
-        );
+        return 18 + this.imageIdentificationFieldLength + this.colorMapLength * this.colorMapPixelSize;
 
       default:
-        throw new Error(
-          `Color Map Type "${this.colorMapType}" is not supported!`
-        );
+        throw new Error(`Color Map Type "${this.colorMapType}" is not supported!`);
     }
   }
 
@@ -114,9 +60,7 @@ export default class TGAImage {
     if (this.isTopToBottom()) {
       offset = y * this.imageWidth * this.pixelSize + x * this.pixelSize;
     } else {
-      offset =
-        (this.imageHeight - y - 1) * this.imageWidth * this.pixelSize +
-        x * this.pixelSize;
+      offset = (this.imageHeight - y - 1) * this.imageWidth * this.pixelSize + x * this.pixelSize;
     }
 
     offset += this.imageDataFieldOffset;
@@ -132,29 +76,14 @@ export default class TGAImage {
         offset = this.dataView.getUint8(offset);
       }
 
-      return (
-        18 +
-        this.imageIdentificationFieldLength +
-        this.colorMapOrigin +
-        offset * this.colorMapPixelSize
-      );
+      return 18 + this.imageIdentificationFieldLength + this.colorMapOrigin + offset * this.colorMapPixelSize;
     }
 
     throw new Error(`Color map type ${this.colorMapType} is not supported`);
   }
 
-  private getPixelColor(
-    x: number,
-    y: number
-  ): {
-    red: number;
-    green: number;
-    blue: number;
-    alpha: number;
-    offset;
-  } | null {
-    const pixelSize =
-      this.colorMapType === 0 ? this.pixelSize : this.colorMapPixelSize;
+  private getPixelColor( x: number, y: number): Color | null {
+    const pixelSize = this.colorMapType === 0 ? this.pixelSize : this.colorMapPixelSize;
     const offset = this.getPixelOffset(x, y);
 
     switch (pixelSize) {
@@ -162,7 +91,9 @@ export default class TGAImage {
         const blue = this.dataView.getUint8(offset);
         const green = this.dataView.getUint8(offset + 1);
         const red = this.dataView.getUint8(offset + 2);
-        return { red, green, blue, alpha: 255, offset };
+
+        // canvas requires an alpha value. Sending 255 for a fully opaque pixel.
+        return { red, green, blue, alpha: 255 };
       }
 
       default:
@@ -173,6 +104,7 @@ export default class TGAImage {
   }
 
   private decodeRunLengthEncoding() {
+    // Slice Image Data and decode RLE
     const decodedArrayBuffer = decodeRunLengthEncoding(
       this.arrayBuffer.slice(this.imageDataFieldOffset),
       this.imageWidth,
@@ -180,11 +112,11 @@ export default class TGAImage {
       this.pixelSize
     );
 
-    const newArrayBuffer = new ArrayBuffer(
-      decodedArrayBuffer.byteLength + this.imageDataFieldOffset
-    );
+    // We are going to replace the array buffer and dataview instance
+    const newArrayBuffer = new ArrayBuffer(decodedArrayBuffer.byteLength + this.imageDataFieldOffset);
     const newDataView = new DataView(newArrayBuffer);
 
+    // Copy the header from the current ArrayBuffer
     for (let i = 0; i < this.imageDataFieldOffset; ++i) {
       const value = this.dataView.getUint8(i);
       newDataView.setUint8(i, value);
@@ -192,11 +124,13 @@ export default class TGAImage {
 
     const decodedDataView = new DataView(decodedArrayBuffer);
 
+    // Copy the image data from decoded RLE ArrayBuffer
     for (let i = 0; i < decodedArrayBuffer.byteLength; ++i) {
       const value = decodedDataView.getUint8(i);
       newDataView.setUint8(this.imageDataFieldOffset + i, value);
     }
 
+    // Replace the current ArrayBuffer and DataView
     this.arrayBuffer = newArrayBuffer;
     this.dataView = newDataView;
   }
@@ -217,10 +151,7 @@ export default class TGAImage {
     canvas.width = this.imageWidth;
     canvas.height = this.imageHeight;
 
-    const imageData = context.createImageData(
-      this.imageWidth,
-      this.imageHeight
-    );
+    const imageData = context.createImageData(this.imageWidth, this.imageHeight);
 
     for (let y = 0; y < this.imageHeight; ++y) {
       for (let x = 0; x < this.imageWidth; ++x) {
@@ -241,10 +172,6 @@ export default class TGAImage {
     }
 
     context.putImageData(imageData, 0, 0);
-  }
-
-  toJSON() {
-    return JSON.stringify(this.getStats(), null, 2);
   }
 
   toTable() {
