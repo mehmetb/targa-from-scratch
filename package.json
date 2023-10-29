@@ -1,0 +1,14 @@
+{
+  "name": "@mehmetb/targa-from-scratch",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "GPL-3.0-or-later",
+  "author": "Mehmet Baker <mehmet@mehmetbaker.dev> (https://mehmetb.github.io)",
+  "scripts": {
+    "build": "esbuild src/index.ts --outdir=www/js --minify --bundle --target=chrome118",
+    "start": "esbuild src/index.ts --outdir=www/js --watch --bundle --target=chrome118 --servedir=www"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.5"
+  }
+}
