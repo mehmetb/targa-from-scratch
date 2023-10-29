@@ -2,6 +2,8 @@
 
 Reads a .tga file into a JavaScript `ArrayBuffer` and draws it on a canvas element. Works entirely in the browser (no back-end).
 
+[Live Demo](https://mehmetb.github.io/targa-from-scratch-demo/)
+
 
 ### How to run
 
