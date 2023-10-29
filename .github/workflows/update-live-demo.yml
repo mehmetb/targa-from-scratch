@@ -1,0 +1,55 @@
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+
+name: Node.js CI
+
+on:
+  push:
+    branches: [ "main" ]
+
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      name: Checkout @mehmetb/targa-from-scratch
+      with:
+        path: 'targa-from-scratch'
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: 20.x
+
+    - run: |
+        cd ./targa-from-scratch 
+        yarn install 
+        yarn build 
+      name: Create JS bundle
+
+    - uses: actions/checkout@v3
+      name: Checkout @mehmetb/mehmetb.github.io
+      with:
+        repository: mehmetb/mehmetb.github.io
+        path: 'mehmetb.github.io'
+        token:  ${{ secrets.ACTIONS_GITHUB_TOKEN }}
+
+    - name: Commit changes to @mehmetb/mehmetb.github.io (if any)
+      run: |
+        cd ./targa-from-scratch
+        cp -r www/* ../mehmetb.github.io/targa-from-scratch-demo/ 
+        cd ../mehmetb.github.io
+        if [[ -z $(git status -s) ]]; then
+        echo "noting to commit";
+        else 
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git add .
+        git commit -m "Updated live demo of 'targa-from-scratch'"
+        git push
+        fi

@@ -13,7 +13,6 @@ function populateStatsTable(tga: TGAImage) {
   table.innerHTML = '';
 
   const rows = tga.toTable();
-  console.table(rows);
 
   for (const [key, value] of Object.entries(rows)) {
     const clone = template.content.cloneNode(true) as HTMLElement;
@@ -23,6 +22,8 @@ function populateStatsTable(tga: TGAImage) {
     tds[1].innerText = value;
     table.appendChild(clone);
   }
+
+  console.table(rows);
 }
 
 async function drawToCanvas() {
