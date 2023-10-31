@@ -1,4 +1,4 @@
-import { readFile } from "./utils";
+import { readFile, generateImageInformationTable } from "./utils";
 import TGAImage from "./TGAImage";
 
 // Esbuild Live Reload
@@ -12,7 +12,7 @@ const template = document.querySelector("#row") as HTMLTemplateElement;
 function populateStatsTable(tga: TGAImage) {
   table.innerHTML = '';
 
-  const rows = tga.toTable();
+  const rows = generateImageInformationTable(tga);
 
   for (const [key, value] of Object.entries(rows)) {
     const clone = template.content.cloneNode(true) as HTMLElement;

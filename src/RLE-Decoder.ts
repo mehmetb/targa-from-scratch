@@ -1,7 +1,7 @@
 class RLEDecoder {
   private decodedArrayBuffer: ArrayBuffer;
-  private readerDataView: DataView;
-  private writerDataView: DataView;
+  private readerBytes: Uint8Array;
+  private writerBytes: Uint8Array;
   private pixelSize: number;
 
   private readCursor = 0;
@@ -14,19 +14,19 @@ class RLEDecoder {
     pixelSize: number
   ) {
     this.decodedArrayBuffer = new ArrayBuffer(width * height * pixelSize);
-    this.readerDataView = new DataView(arrayBuffer);
-    this.writerDataView = new DataView(this.decodedArrayBuffer);
+    this.readerBytes = new Uint8Array(arrayBuffer);
+    this.writerBytes = new Uint8Array(this.decodedArrayBuffer);
     this.pixelSize = pixelSize;
   }
 
   private read(): number {
-    const packet = this.readerDataView.getUint8(this.readCursor);
+    const packet = this.readerBytes[this.readCursor];
     this.readCursor += 1;
     return packet;
   }
 
   private write(value: number) {
-    this.writerDataView.setUint8(this.writeCursor, value);
+    this.writerBytes[this.writeCursor] = value;
     this.writeCursor += 1;
   }
 
@@ -47,7 +47,7 @@ class RLEDecoder {
   }
 
   decode(): ArrayBuffer {
-    while (this.writeCursor < this.writerDataView.byteLength) {
+    while (this.writeCursor < this.writerBytes.byteLength) {
       const packet = this.read();
 
       // RLE packet

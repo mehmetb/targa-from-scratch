@@ -14,3 +14,7 @@ export type Color = {
   blue: number;
   alpha: number;
 }
+
+export enum ImageDescriptorFields {
+  TOP_TO_BOTTOM = 16, // byte: 00010000
+}

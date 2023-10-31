@@ -1,43 +1,71 @@
-import { ImageType, Color } from './types';
+import { ImageType, Color, ImageDescriptorFields } from './types';
 import { decodeRunLengthEncoding } from './RLE-Decoder';
 import { concatArrayBuffers } from './utils';
 
 export default class TGAImage {
-  private arrayBuffer: ArrayBuffer;
-  private dataView: DataView;
+  private static GRID_SIZE = 30;
 
-  private colorMapType: number;
-  private imageType: ImageType;
-  private xOrigin: number;
-  private yOrigin: number;
-  private imageWidth: number;
-  private imageHeight: number;
-  private pixelSize: number;
-  private imageDescriptor: number;
-  private imageIdentificationFieldLength: number;
-  private imageDataFieldOffset: number;
-  private colorMapOrigin: number;
-  private colorMapLength: number;
-  private colorMapPixelSize: number;
-  private version: 1|2;
+  #arrayBuffer: ArrayBuffer;
+  private dataView: DataView;
+  private bytes: Uint8Array;
+
+  colorMapType: number;
+  imageType: ImageType;
+  xOrigin: number;
+  yOrigin: number;
+  imageWidth: number;
+  imageHeight: number;
+  pixelSize: number;
+  imageDescriptor: number;
+  imageIdentificationFieldLength: number;
+  imageDataFieldOffset: number;
+  colorMapOrigin: number;
+  colorMapLength: number;
+  colorMapPixelSize: number;
+  extensionOffset: number;
+  version: 1|2;
+  durations: { RLEDecodeDuration: number, CanvasDrawDuration: number } = {
+    RLEDecodeDuration: 0,
+    CanvasDrawDuration: 0,
+  };
+
+  get arrayBuffer() {
+    return this.#arrayBuffer;
+  }
+
+  set arrayBuffer(arrayBuffer: ArrayBuffer) {
+    this.#arrayBuffer = arrayBuffer;
+    this.dataView = new DataView(arrayBuffer);
+    this.bytes = new Uint8Array(arrayBuffer);
+  }
 
   constructor(arrayBuffer: ArrayBuffer) {
     this.arrayBuffer = arrayBuffer;
-    this.dataView = new DataView(arrayBuffer);
-    this.imageIdentificationFieldLength = this.dataView.getUint8(0);
-    this.colorMapType = this.dataView.getUint8(1);
-    this.imageType = this.dataView.getUint8(2);
+    this.imageIdentificationFieldLength = this.bytes[0];
+    this.colorMapType = this.bytes[1];
+    this.imageType = this.bytes[2];
     this.colorMapOrigin = this.dataView.getUint16(3, true);
     this.colorMapLength = this.dataView.getUint16(5, true);
-    this.colorMapPixelSize = this.dataView.getUint8(7) / 8;
-    this.xOrigin = this.dataView.getUint16(8);
-    this.yOrigin = this.dataView.getUint16(10);
+    this.colorMapPixelSize = this.bytes[7] / 8;
+    this.xOrigin = this.bytes[8];
+    this.yOrigin = this.bytes[10];
     this.imageWidth = this.dataView.getUint16(12, true);
     this.imageHeight = this.dataView.getUint16(14, true);
-    this.pixelSize = this.dataView.getUint8(16) / 8;
-    this.imageDescriptor = this.dataView.getUint8(17);
+    this.pixelSize = this.bytes[16] / 8;
+    this.imageDescriptor = this.bytes[17];
     this.imageDataFieldOffset = this.getImageDataFieldOffset();
     this.detectVersion();
+
+    if (this.imageType > 8) {
+      const begin = performance.now();
+      this.decodeRunLengthEncoding();
+      const end = performance.now();
+      this.durations.RLEDecodeDuration = end - begin;
+    }
+
+    if (this.version === 2) {
+      this.extensionOffset = this.dataView.getUint32(this.dataView.byteLength - 26, true);
+    }
   }
 
   private detectVersion() {
@@ -46,6 +74,40 @@ export default class TGAImage {
     const textDecoder = new TextDecoder();
     const footerStr = textDecoder.decode(footer);
     this.version = footerStr === v2Footer ? 2 : 1;
+  }
+
+  private decodeRunLengthEncoding() {
+    // Slice Image Data and decode RLE
+    const decodedArrayBuffer = decodeRunLengthEncoding(
+      this.arrayBuffer.slice(this.imageDataFieldOffset),
+      this.imageWidth,
+      this.imageHeight,
+      this.pixelSize
+    );
+
+    switch (this.version) {
+      case 1: {
+        const header = this.arrayBuffer.slice(0, this.imageDataFieldOffset);
+        this.arrayBuffer = concatArrayBuffers(header, decodedArrayBuffer);
+        break;
+      }
+
+      case 2: {
+        const header = this.arrayBuffer.slice(0, this.imageDataFieldOffset);
+        let footer;
+        
+        if (this.extensionOffset !== 0) {
+          footer = this.arrayBuffer.slice(this.extensionOffset);
+        } else {
+          footer = this.arrayBuffer.slice(-26);
+        }
+
+        this.arrayBuffer = concatArrayBuffers(header, decodedArrayBuffer, footer);
+        break;
+      }
+
+      // no default
+    }
   }
 
   private getImageDataFieldOffset(): number {
@@ -61,8 +123,8 @@ export default class TGAImage {
     }
   }
 
-  private isTopToBottom(): boolean {
-    return (4 & this.imageDescriptor) === 4;
+  isTopToBottom(): boolean {
+    return (this.imageDescriptor & ImageDescriptorFields.TOP_TO_BOTTOM) === ImageDescriptorFields.TOP_TO_BOTTOM;
   }
 
   private getPixelOffset(x: number, y: number): number {
@@ -84,7 +146,7 @@ export default class TGAImage {
       if (this.pixelSize === 2) {
         offset = this.dataView.getUint16(offset, true);
       } else {
-        offset = this.dataView.getUint8(offset);
+        offset = this.bytes[offset];
       }
 
       return 18 + this.imageIdentificationFieldLength + this.colorMapOrigin + offset * this.colorMapPixelSize;
@@ -98,13 +160,26 @@ export default class TGAImage {
     const offset = this.getPixelOffset(x, y);
 
     switch (pixelSize) {
+      case 1: {
+        const value = this.bytes[offset];
+        return { red: value, green: value, blue: value, alpha: 255 };
+      }
+
       case 3: {
-        const blue = this.dataView.getUint8(offset);
-        const green = this.dataView.getUint8(offset + 1);
-        const red = this.dataView.getUint8(offset + 2);
+        const blue = this.bytes[offset];
+        const green = this.bytes[offset + 1];
+        const red = this.bytes[offset + 2];
 
         // canvas requires an alpha value. Sending 255 for a fully opaque pixel.
         return { red, green, blue, alpha: 255 };
+      }
+
+      case 4: {
+        const blue = this.bytes[offset];
+        const green = this.bytes[offset + 1];
+        const red = this.bytes[offset + 2];
+        const alpha = this.bytes[offset + 3];
+        return { blue, green, red, alpha };
       }
 
       default:
@@ -112,30 +187,36 @@ export default class TGAImage {
     }
   }
 
-  private decodeRunLengthEncoding() {
-    // Slice Image Data and decode RLE
-    const decodedArrayBuffer = decodeRunLengthEncoding(
-      this.arrayBuffer.slice(this.imageDataFieldOffset),
-      this.imageWidth,
-      this.imageHeight,
-      this.pixelSize
-    );
+  static getCanvasBackgroundColor(x: number, y: number): Color {
+    const evenX = Math.floor(x / this.GRID_SIZE) % 2 === 0;
+    const evenY = Math.floor(y / this.GRID_SIZE) % 2 === 0;
 
-    const header = this.arrayBuffer.slice(0, this.imageDataFieldOffset);
-    this.arrayBuffer = concatArrayBuffers(header, decodedArrayBuffer);
-    this.dataView = new DataView(this.arrayBuffer);
+    if (Number(evenX) ^ Number(evenY)) {
+      return { red: 100, green: 100, blue: 100, alpha: 255 };
+    }
+
+    return { red: 180, green: 180, blue: 180, alpha: 255 };
+  }
+
+  static blendColors(backgroundColor: Color, color: Color): Color {
+    const colorPercentage = color.alpha / 255;
+    const bgPercentage = 1 - colorPercentage;
+
+    return {
+      red: Math.min(255, color.red * colorPercentage + backgroundColor.red * bgPercentage),
+      green: Math.min(255, color.green * colorPercentage + backgroundColor.green * bgPercentage),
+      blue: Math.min(255, color.blue * colorPercentage + backgroundColor.blue * bgPercentage),
+      alpha: 255,
+    };
   }
 
   draw(canvas: HTMLCanvasElement) {
+    const begin = performance.now();
     const context = canvas.getContext('2d');
 
     if (!context) {
       alert('Failed to get canvas context');
       return;
-    }
-
-    if (this.imageType > 8) {
-      this.decodeRunLengthEncoding();
     }
 
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -149,45 +230,18 @@ export default class TGAImage {
         const color = this.getPixelColor(x, y);
         const canvasOffset = y * this.imageWidth * 4 + x * 4;
 
-        imageData.data[canvasOffset] = color.red;
-        imageData.data[canvasOffset + 1] = color.green;
-        imageData.data[canvasOffset + 2] = color.blue;
-        imageData.data[canvasOffset + 3] = color.alpha;
+        const backgroundColor = TGAImage.getCanvasBackgroundColor(x, y);
+        const blended = TGAImage.blendColors(backgroundColor, color);
+
+        imageData.data[canvasOffset] = blended.red;
+        imageData.data[canvasOffset + 1] = blended.green;
+        imageData.data[canvasOffset + 2] = blended.blue;
+        imageData.data[canvasOffset + 3] = blended.alpha;
       }
     }
 
     context.putImageData(imageData, 0, 0);
-  }
-
-  toTable() {
-    const stats = this.getStats();
-    const rows: { [key: string]: string } = {};
-
-    for (const [key, value] of Object.entries(stats)) {
-      const firsCharacter = key[0];
-      const field = `${firsCharacter.toUpperCase()}${key.replace(/([A-Z])/g, ' $1').substring(1)}`;
-      rows[field] = value as string;
-    }
-
-    return rows;
-  }
-
-  getStats() {
-    return {
-      version: this.version,
-      colorMapType: this.colorMapType,
-      imageType: ImageType[this.imageType],
-      xOrigin: this.xOrigin,
-      yOrigin: this.yOrigin,
-      imageWidth: this.imageWidth,
-      imageHeight: this.imageHeight,
-      pixelSize: this.pixelSize,
-      imageDescriptor: this.imageDescriptor.toString(2),
-      imageIdentificationFieldLength: this.imageIdentificationFieldLength,
-      topToBottom: this.isTopToBottom(),
-      colorMapOrigin: this.colorMapOrigin,
-      colorMapLength: this.colorMapLength,
-      colorMapPixelSize: this.colorMapPixelSize,
-    };
+    const end = performance.now();
+    this.durations.CanvasDrawDuration = end - begin;
   }
 }
