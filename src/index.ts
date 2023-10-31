@@ -1,4 +1,4 @@
-import { readFile } from "./file-reader";
+import { readFile } from "./utils";
 import TGAImage from "./TGAImage";
 
 // Esbuild Live Reload

@@ -1,5 +1,6 @@
 import { ImageType, Color } from './types';
 import { decodeRunLengthEncoding } from './RLE-Decoder';
+import { concatArrayBuffers } from './utils';
 
 export default class TGAImage {
   private arrayBuffer: ArrayBuffer;
@@ -110,27 +111,9 @@ export default class TGAImage {
       this.pixelSize
     );
 
-    // We are going to replace the array buffer and dataview instance
-    const newArrayBuffer = new ArrayBuffer(decodedArrayBuffer.byteLength + this.imageDataFieldOffset);
-    const newDataView = new DataView(newArrayBuffer);
-
-    // Copy the header from the current ArrayBuffer
-    for (let i = 0; i < this.imageDataFieldOffset; ++i) {
-      const value = this.dataView.getUint8(i);
-      newDataView.setUint8(i, value);
-    }
-
-    const decodedDataView = new DataView(decodedArrayBuffer);
-
-    // Copy the image data from decoded RLE ArrayBuffer
-    for (let i = 0; i < decodedArrayBuffer.byteLength; ++i) {
-      const value = decodedDataView.getUint8(i);
-      newDataView.setUint8(this.imageDataFieldOffset + i, value);
-    }
-
-    // Replace the current ArrayBuffer and DataView
-    this.arrayBuffer = newArrayBuffer;
-    this.dataView = newDataView;
+    const header = this.arrayBuffer.slice(0, this.imageDataFieldOffset);
+    this.arrayBuffer = concatArrayBuffers(header, decodedArrayBuffer);
+    this.dataView = new DataView(this.arrayBuffer);
   }
 
   draw(canvas: HTMLCanvasElement) {
