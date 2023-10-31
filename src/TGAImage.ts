@@ -19,6 +19,7 @@ export default class TGAImage {
   private colorMapOrigin: number;
   private colorMapLength: number;
   private colorMapPixelSize: number;
+  private version: 1|2;
 
   constructor(arrayBuffer: ArrayBuffer) {
     this.arrayBuffer = arrayBuffer;
@@ -36,6 +37,15 @@ export default class TGAImage {
     this.pixelSize = this.dataView.getUint8(16) / 8;
     this.imageDescriptor = this.dataView.getUint8(17);
     this.imageDataFieldOffset = this.getImageDataFieldOffset();
+    this.detectVersion();
+  }
+
+  private detectVersion() {
+    const v2Footer =  'TRUEVISION-XFILE.\0';
+    const footer = this.arrayBuffer.slice(-18);
+    const textDecoder = new TextDecoder();
+    const footerStr = textDecoder.decode(footer);
+    this.version = footerStr === v2Footer ? 2 : 1;
   }
 
   private getImageDataFieldOffset(): number {
@@ -164,6 +174,7 @@ export default class TGAImage {
 
   getStats() {
     return {
+      version: this.version,
       colorMapType: this.colorMapType,
       imageType: ImageType[this.imageType],
       xOrigin: this.xOrigin,

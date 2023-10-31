@@ -47,7 +47,7 @@ class RLEDecoder {
   }
 
   decode(): ArrayBuffer {
-    while (this.readCursor < this.readerDataView.byteLength) {
+    while (this.writeCursor < this.writerDataView.byteLength) {
       const packet = this.read();
 
       // RLE packet
