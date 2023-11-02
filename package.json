@@ -5,8 +5,8 @@
   "license": "GPL-3.0-or-later",
   "author": "Mehmet Baker <mehmet@mehmetbaker.dev> (https://mehmetb.github.io)",
   "scripts": {
-    "build": "esbuild src/index.ts --outdir=www/js --minify --bundle --target=chrome118",
-    "start": "esbuild src/index.ts --outdir=www/js --watch --bundle --target=chrome118 --servedir=www"
+    "build": "esbuild src/index.ts --outdir=www/js --format=esm --bundle --target=ESNext",
+    "start": "esbuild src/index.ts --outdir=www/js --format=esm --watch --bundle --target=ESNext --servedir=www"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^6.0.0",

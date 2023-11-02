@@ -24,21 +24,20 @@ function capitalize(str: string): string {
 
 export function generateImageInformationTable(tga: TGAImage) {
   const stats = {
-    version: tga.version,
-    imageType: capitalize(ImageType[tga.imageType].toLowerCase().replace(/_/g, ' ')),
-    xOrigin: tga.xOrigin,
-    yOrigin: tga.yOrigin,
-    imageWidth: tga.imageWidth,
-    imageHeight: tga.imageHeight,
-    pixelSize: tga.pixelSize,
-    imageDescriptor: tga.imageDescriptor.toString(2).padStart(8, '0'),
-    imageIdentificationFieldLength: tga.imageIdentificationFieldLength,
-    topToBottom: tga.isTopToBottom(),
-    colorMapOrigin: tga.colorMapOrigin,
-    colorMapLength: tga.colorMapLength,
-    colorMapPixelSize: tga.colorMapPixelSize,
-    RLEDecodeDuration: `${tga.durations.RLEDecodeDuration} ms`,
-    DrawDuration: `${tga.durations.CanvasDrawDuration} ms`,
+    version: tga.stats.version,
+    imageType: capitalize(ImageType[tga.stats.imageType].toLowerCase().replace(/_/g, ' ')),
+    xOrigin: tga.stats.xOrigin,
+    yOrigin: tga.stats.yOrigin,
+    imageWidth: tga.stats.imageWidth,
+    imageHeight: tga.stats.imageHeight,
+    pixelSize: tga.stats.pixelSize,
+    imageDescriptor: tga.stats.imageDescriptor.toString(2).padStart(8, '0'),
+    imageIdentificationFieldLength: tga.stats.imageIdentificationFieldLength,
+    topToBottom: tga.stats.isTopToBottom(),
+    colorMapOrigin: tga.stats.colorMapOrigin,
+    colorMapLength: tga.stats.colorMapLength,
+    colorMapPixelSize: tga.stats.colorMapPixelSize,
+    processingTook: `${tga.stats.duration} ms`,
   };
 
   const rows: { [key: string]: string } = {};
