@@ -3,15 +3,24 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "GPL-3.0-or-later",
-  "author": "Mehmet Baker <mehmet@mehmetbaker.dev> (https://mehmetb.github.io)",
+  "author": {
+    "name": "Mehmet Baker",
+    "email": "mehmet@mehmetbaker.dev",
+    "url": "https://mehmetb.github.io"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mehmetb/targa-from-scratch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mehmetb/targa-from-scratch/issues"
+  },
+  "homepage": "https://github.com/mehmetb/targa-from-scratch#readme",
   "scripts": {
     "build": "esbuild src/index.ts --outdir=www/js --format=esm --bundle --target=ESNext",
     "start": "esbuild src/index.ts --outdir=www/js --format=esm --watch --bundle --target=ESNext --servedir=www"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "esbuild": "^0.19.5",
-    "eslint-config-airbnb-typescript": "^17.1.0"
+    "esbuild": "^0.19.5"
   }
 }
