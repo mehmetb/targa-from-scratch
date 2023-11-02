@@ -1,6 +1,5 @@
 import { ImageType, Color, ImageDescriptorFields } from './types';
 import { decodeRunLengthEncoding } from './RLE-Decoder';
-import { concatArrayBuffers } from './utils';
 
 export default class TGAImage {
   private static GRID_SIZE = 30;
@@ -8,6 +7,10 @@ export default class TGAImage {
   #arrayBuffer: ArrayBuffer;
   private dataView: DataView;
   private bytes: Uint8Array;
+
+  private imageDataBytes: Uint8Array;
+  private imageDataView: DataView;
+  private rleEncoded: boolean = false;
 
   colorMapType: number;
   imageType: ImageType;
@@ -56,15 +59,19 @@ export default class TGAImage {
     this.imageDataFieldOffset = this.getImageDataFieldOffset();
     this.detectVersion();
 
-    if (this.imageType > 8) {
+    if (this.version === 2) {
+      this.extensionOffset = this.dataView.getUint32(this.dataView.byteLength - 26, true);
+    }
+
+    this.rleEncoded = this.imageType > 8;
+
+    if (this.rleEncoded) {
       const begin = performance.now();
       this.decodeRunLengthEncoding();
       const end = performance.now();
       this.durations.RLEDecodeDuration = end - begin;
-    }
-
-    if (this.version === 2) {
-      this.extensionOffset = this.dataView.getUint32(this.dataView.byteLength - 26, true);
+    } else {
+      this.imageDataBytes = this.bytes.subarray(this.imageDataFieldOffset);
     }
   }
 
@@ -77,37 +84,15 @@ export default class TGAImage {
   }
 
   private decodeRunLengthEncoding() {
+    const newImageData = new Uint8Array(new ArrayBuffer(this.imageHeight * this.imageWidth * this.pixelSize));
+
     // Slice Image Data and decode RLE
-    const decodedArrayBuffer = decodeRunLengthEncoding(
-      this.arrayBuffer.slice(this.imageDataFieldOffset),
-      this.imageWidth,
-      this.imageHeight,
-      this.pixelSize
-    );
+    decodeRunLengthEncoding(this.bytes.subarray(this.imageDataFieldOffset, this.bytes.length - 26), newImageData, this.pixelSize);
 
-    switch (this.version) {
-      case 1: {
-        const header = this.arrayBuffer.slice(0, this.imageDataFieldOffset);
-        this.arrayBuffer = concatArrayBuffers(header, decodedArrayBuffer);
-        break;
-      }
+    console.info(newImageData);
 
-      case 2: {
-        const header = this.arrayBuffer.slice(0, this.imageDataFieldOffset);
-        let footer;
-        
-        if (this.extensionOffset !== 0) {
-          footer = this.arrayBuffer.slice(this.extensionOffset);
-        } else {
-          footer = this.arrayBuffer.slice(-26);
-        }
-
-        this.arrayBuffer = concatArrayBuffers(header, decodedArrayBuffer, footer);
-        break;
-      }
-
-      // no default
-    }
+    this.imageDataBytes = newImageData;
+    this.imageDataView = new DataView(newImageData.buffer);
   }
 
   private getImageDataFieldOffset(): number {
@@ -136,17 +121,17 @@ export default class TGAImage {
       offset = (this.imageHeight - y - 1) * this.imageWidth * this.pixelSize + x * this.pixelSize;
     }
 
-    offset += this.imageDataFieldOffset;
-
     if (this.colorMapType === 0) {
       return offset;
     }
 
     if (this.colorMapType === 1) {
       if (this.pixelSize === 2) {
-        offset = this.dataView.getUint16(offset, true);
+        offset = this.rleEncoded
+          ? this.imageDataView.getUint16(offset, true)
+          : this.dataView.getUint16(offset, true);
       } else {
-        offset = this.bytes[offset];
+        offset = this.imageDataBytes[offset];
       }
 
       return 18 + this.imageIdentificationFieldLength + this.colorMapOrigin + offset * this.colorMapPixelSize;
@@ -158,27 +143,28 @@ export default class TGAImage {
   private getPixelColor( x: number, y: number): Color {
     const pixelSize = this.colorMapType === 0 ? this.pixelSize : this.colorMapPixelSize;
     const offset = this.getPixelOffset(x, y);
+    const bytes = this.colorMapType === 0 ? this.imageDataBytes : this.bytes;
 
     switch (pixelSize) {
       case 1: {
-        const value = this.bytes[offset];
+        const value = bytes[offset];
         return { red: value, green: value, blue: value, alpha: 255 };
       }
 
       case 3: {
-        const blue = this.bytes[offset];
-        const green = this.bytes[offset + 1];
-        const red = this.bytes[offset + 2];
+        const blue = bytes[offset];
+        const green = bytes[offset + 1];
+        const red = bytes[offset + 2];
 
         // canvas requires an alpha value. Sending 255 for a fully opaque pixel.
         return { red, green, blue, alpha: 255 };
       }
 
       case 4: {
-        const blue = this.bytes[offset];
-        const green = this.bytes[offset + 1];
-        const red = this.bytes[offset + 2];
-        const alpha = this.bytes[offset + 3];
+        const blue = bytes[offset];
+        const green = bytes[offset + 1];
+        const red = bytes[offset + 2];
+        const alpha = bytes[offset + 3];
         return { blue, green, red, alpha };
       }
 

@@ -1,33 +1,27 @@
 class RLEDecoder {
-  private decodedArrayBuffer: ArrayBuffer;
-  private readerBytes: Uint8Array;
-  private writerBytes: Uint8Array;
+  private readArray: Uint8Array;
+  private writeArray: Uint8Array;
   private pixelSize: number;
 
   private readCursor = 0;
   private writeCursor = 0;
 
   constructor(
-    arrayBuffer: ArrayBuffer,
-    width: number,
-    height: number,
+    readArray: Uint8Array,
+    writeArray: Uint8Array,
     pixelSize: number
   ) {
-    this.decodedArrayBuffer = new ArrayBuffer(width * height * pixelSize);
-    this.readerBytes = new Uint8Array(arrayBuffer);
-    this.writerBytes = new Uint8Array(this.decodedArrayBuffer);
+    this.readArray = readArray;
+    this.writeArray = writeArray;
     this.pixelSize = pixelSize;
   }
 
   private read(): number {
-    const packet = this.readerBytes[this.readCursor];
-    this.readCursor += 1;
-    return packet;
+    return this.readArray[this.readCursor++];
   }
 
   private write(value: number) {
-    this.writerBytes[this.writeCursor] = value;
-    this.writeCursor += 1;
+    this.writeArray[this.writeCursor++] = value;
   }
 
   private readNextPixel(): number[] {
@@ -46,8 +40,11 @@ class RLEDecoder {
     }
   }
 
-  decode(): ArrayBuffer {
-    while (this.writeCursor < this.writerBytes.byteLength) {
+  decode(): void {
+    console.time('decode loop');
+    const readArrayLength = this.readArray.byteLength;
+
+    for (let i = 0; i < readArrayLength; ++i) {
       const packet = this.read();
 
       // RLE packet
@@ -69,16 +66,15 @@ class RLEDecoder {
       }
     }
 
-    return this.decodedArrayBuffer;
+    console.timeEnd('decode loop');
   }
 }
 
 export function decodeRunLengthEncoding(
-  arrayBuffer: ArrayBuffer,
-  width: number,
-  height: number,
+  readArray: Uint8Array,
+  writeArray: Uint8Array,
   pixelSize: number
-): ArrayBuffer {
-  const decoder = new RLEDecoder(arrayBuffer, width, height, pixelSize);
-  return decoder.decode();
+): void {
+  const decoder = new RLEDecoder(readArray, writeArray, pixelSize);
+  decoder.decode();
 }
