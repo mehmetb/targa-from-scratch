@@ -223,10 +223,10 @@ export default class TGAImage {
 
           switch (pixelSize) {
             case 1: {
-              const byte = imageDataBytes[readCursor++];
-              data[canvasOffset] = byte;
-              data[canvasOffset + 1] = byte;
-              data[canvasOffset + 2] = byte;
+              data[canvasOffset] = imageDataBytes[readCursor];
+              data[canvasOffset + 1] = imageDataBytes[readCursor];
+              data[canvasOffset + 2] = imageDataBytes[readCursor];
+              readCursor += 1;
               break;
             }
 
