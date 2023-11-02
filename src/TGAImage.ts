@@ -27,7 +27,10 @@ export default class TGAImage {
     this.stats = new ImageStats(arrayBuffer);
 
     if (this.stats.rleEncoded) {
-      this.imageDataBytes = this.bytes.subarray(this.stats.imageDataFieldOffset, this.stats.getFooterOffset());
+      this.imageDataBytes = this.bytes.subarray(
+        this.stats.imageDataFieldOffset,
+        this.stats.getFooterOffset(),
+      );
     } else {
       this.imageDataBytes = this.bytes.subarray(this.stats.imageDataFieldOffset);
     }
@@ -179,14 +182,20 @@ export default class TGAImage {
                     255,
                     byte2 * colorPercentage + 100 * bgPercentage,
                   );
-                  data[canvasOffset + 2] = Math.min(255, byte1 * colorPercentage + 100 * bgPercentage);
+                  data[canvasOffset + 2] = Math.min(
+                    255,
+                    byte1 * colorPercentage + 100 * bgPercentage,
+                  );
                 } else {
                   data[canvasOffset] = Math.min(255, byte3 * colorPercentage + 180 * bgPercentage);
                   data[canvasOffset + 1] = Math.min(
                     255,
                     byte2 * colorPercentage + 180 * bgPercentage,
                   );
-                  data[canvasOffset + 2] = Math.min(255, byte1 * colorPercentage + 180 * bgPercentage);
+                  data[canvasOffset + 2] = Math.min(
+                    255,
+                    byte1 * colorPercentage + 180 * bgPercentage,
+                  );
                 }
               }
 
@@ -274,7 +283,16 @@ export default class TGAImage {
 
   private drawColorMapped(imageData: ImageData) {
     console.time('color mapped loop');
-    const { imageHeight, imageWidth, pixelSize, topToBottom, colorMapPixelSize, colorMapOrigin, imageIdentificationFieldLength, imageDataFieldOffset } = this.stats;
+    const {
+      imageHeight,
+      imageWidth,
+      pixelSize,
+      topToBottom,
+      colorMapPixelSize,
+      colorMapOrigin,
+      imageIdentificationFieldLength,
+      imageDataFieldOffset,
+    } = this.stats;
     const { data } = imageData;
     const { imageDataBytes, bytes, dataView } = this;
     const { GRID_SIZE } = TGAImage;
@@ -289,9 +307,12 @@ export default class TGAImage {
         data[canvasOffset + 3] = 255;
 
         const byteOffset = y * imageWidth * pixelSize + x * pixelSize;
-        const colorMapEntryOffset =  padding + colorMapPixelSize * (pixelSize === 1
-          ? imageDataBytes[byteOffset]
-          : dataView.getUint16(imageDataFieldOffset + byteOffset, true));
+        const colorMapEntryOffset =
+          padding +
+          colorMapPixelSize *
+            (pixelSize === 1
+              ? imageDataBytes[byteOffset]
+              : dataView.getUint16(imageDataFieldOffset + byteOffset, true));
 
         switch (colorMapPixelSize) {
           case 1: {

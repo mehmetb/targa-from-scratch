@@ -8,13 +8,6 @@ export enum ImageType {
   RUN_LENGTH_ENCODED_GRAY_SCALE = 11,
 }
 
-export type Color = {
-  red: number;
-  green: number;
-  blue: number;
-  alpha: number;
-}
-
 export enum ImageDescriptorFields {
   TOP_TO_BOTTOM = 16, // byte: 00010000
 }

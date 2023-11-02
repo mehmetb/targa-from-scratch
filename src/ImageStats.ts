@@ -21,7 +21,7 @@ export class ImageStats {
   colorMapLength: number;
   colorMapPixelSize: number;
   extensionOffset: number;
-  version: 1|2;
+  version: 1 | 2;
   topToBottom: boolean;
   duration: number = 0;
 
@@ -57,11 +57,11 @@ export class ImageStats {
     }
 
     this.topToBottom = this.isTopToBottom();
-    
+
     if (
-      this.imageType === ImageType.RUN_LENGTH_ENCODED_COLOR_MAPPED
-      || this.imageType === ImageType.RUN_LENGTH_ENCODED_GRAY_SCALE
-      || this.imageType === ImageType.RUN_LENGTH_ENCODED_TRUE_COLOR
+      this.imageType === ImageType.RUN_LENGTH_ENCODED_COLOR_MAPPED ||
+      this.imageType === ImageType.RUN_LENGTH_ENCODED_GRAY_SCALE ||
+      this.imageType === ImageType.RUN_LENGTH_ENCODED_TRUE_COLOR
     ) {
       this.rleEncoded = true;
     }
@@ -73,7 +73,9 @@ export class ImageStats {
         return 18 + this.imageIdentificationFieldLength;
 
       case 1:
-        return 18 + this.imageIdentificationFieldLength + this.colorMapLength * this.colorMapPixelSize;
+        return (
+          18 + this.imageIdentificationFieldLength + this.colorMapLength * this.colorMapPixelSize
+        );
 
       default:
         throw new Error(`Color Map Type "${this.colorMapType}" is not supported!`);
@@ -81,7 +83,7 @@ export class ImageStats {
   }
 
   private detectVersion() {
-    const v2Footer =  'TRUEVISION-XFILE.\0';
+    const v2Footer = 'TRUEVISION-XFILE.\0';
     const footer = this.arrayBuffer.slice(-18);
     const textDecoder = new TextDecoder();
     const footerStr = textDecoder.decode(footer);
@@ -89,7 +91,10 @@ export class ImageStats {
   }
 
   isTopToBottom(): boolean {
-    return (this.imageDescriptor & ImageDescriptorFields.TOP_TO_BOTTOM) === ImageDescriptorFields.TOP_TO_BOTTOM;
+    return (
+      (this.imageDescriptor & ImageDescriptorFields.TOP_TO_BOTTOM) ===
+      ImageDescriptorFields.TOP_TO_BOTTOM
+    );
   }
 
   getFooterOffset(): number {

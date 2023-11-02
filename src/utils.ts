@@ -44,7 +44,9 @@ export function generateImageInformationTable(tga: TGAImage) {
 
   for (const [key, value] of Object.entries(stats)) {
     const firsCharacter = key[0];
-    const field = `${firsCharacter.toUpperCase()}${key.replace(/(?!\b[A-Z])([A-Z])/g, ' $1').substring(1)}`;
+    const field = `${firsCharacter.toUpperCase()}${key
+      .replace(/(?!\b[A-Z])([A-Z])/g, ' $1')
+      .substring(1)}`;
 
     if (typeof value === 'boolean') {
       rows[field] = value ? 'Yes' : 'No';
