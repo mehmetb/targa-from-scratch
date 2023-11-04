@@ -1,6 +1,5 @@
-import { ImageType, Color, ImageDescriptorFields } from './types';
-import { decodeRunLengthEncoding } from './RLE-Decoder';
-import { concatArrayBuffers } from './utils';
+import { ImageType } from './types';
+import { ImageStats } from './ImageStats';
 
 export default class TGAImage {
   private static GRID_SIZE = 30;
@@ -9,25 +8,9 @@ export default class TGAImage {
   private dataView: DataView;
   private bytes: Uint8Array;
 
-  colorMapType: number;
-  imageType: ImageType;
-  xOrigin: number;
-  yOrigin: number;
-  imageWidth: number;
-  imageHeight: number;
-  pixelSize: number;
-  imageDescriptor: number;
-  imageIdentificationFieldLength: number;
-  imageDataFieldOffset: number;
-  colorMapOrigin: number;
-  colorMapLength: number;
-  colorMapPixelSize: number;
-  extensionOffset: number;
-  version: 1|2;
-  durations: { RLEDecodeDuration: number, CanvasDrawDuration: number } = {
-    RLEDecodeDuration: 0,
-    CanvasDrawDuration: 0,
-  };
+  private imageDataBytes: Uint8Array;
+
+  stats: ImageStats;
 
   get arrayBuffer() {
     return this.#arrayBuffer;
@@ -41,177 +24,395 @@ export default class TGAImage {
 
   constructor(arrayBuffer: ArrayBuffer) {
     this.arrayBuffer = arrayBuffer;
-    this.imageIdentificationFieldLength = this.bytes[0];
-    this.colorMapType = this.bytes[1];
-    this.imageType = this.bytes[2];
-    this.colorMapOrigin = this.dataView.getUint16(3, true);
-    this.colorMapLength = this.dataView.getUint16(5, true);
-    this.colorMapPixelSize = this.bytes[7] / 8;
-    this.xOrigin = this.bytes[8];
-    this.yOrigin = this.bytes[10];
-    this.imageWidth = this.dataView.getUint16(12, true);
-    this.imageHeight = this.dataView.getUint16(14, true);
-    this.pixelSize = this.bytes[16] / 8;
-    this.imageDescriptor = this.bytes[17];
-    this.imageDataFieldOffset = this.getImageDataFieldOffset();
-    this.detectVersion();
+    this.stats = new ImageStats(arrayBuffer);
 
-    if (this.imageType > 8) {
-      const begin = performance.now();
-      this.decodeRunLengthEncoding();
-      const end = performance.now();
-      this.durations.RLEDecodeDuration = end - begin;
-    }
-
-    if (this.version === 2) {
-      this.extensionOffset = this.dataView.getUint32(this.dataView.byteLength - 26, true);
+    if (this.stats.rleEncoded) {
+      this.imageDataBytes = this.bytes.subarray(
+        this.stats.imageDataFieldOffset,
+        this.stats.getFooterOffset(),
+      );
+    } else {
+      this.imageDataBytes = this.bytes.subarray(this.stats.imageDataFieldOffset);
     }
   }
 
-  private detectVersion() {
-    const v2Footer =  'TRUEVISION-XFILE.\0';
-    const footer = this.arrayBuffer.slice(-18);
-    const textDecoder = new TextDecoder();
-    const footerStr = textDecoder.decode(footer);
-    this.version = footerStr === v2Footer ? 2 : 1;
-  }
+  private drawUncompressedGrayscale(imageData: ImageData) {
+    console.time('uncompressed loop');
+    const { imageHeight, imageWidth, topToBottom } = this.stats;
+    const { data } = imageData;
+    const { imageDataBytes } = this;
+    data.fill(255);
 
-  private decodeRunLengthEncoding() {
-    // Slice Image Data and decode RLE
-    const decodedArrayBuffer = decodeRunLengthEncoding(
-      this.arrayBuffer.slice(this.imageDataFieldOffset),
-      this.imageWidth,
-      this.imageHeight,
-      this.pixelSize
-    );
+    for (let y = 0; y < imageHeight; ++y) {
+      for (let x = 0; x < imageWidth; ++x) {
+        const canvasOffset = topToBottom
+          ? y * imageWidth * 4 + x * 4
+          : (imageHeight - y - 1) * imageWidth * 4 + x * 4;
 
-    switch (this.version) {
-      case 1: {
-        const header = this.arrayBuffer.slice(0, this.imageDataFieldOffset);
-        this.arrayBuffer = concatArrayBuffers(header, decodedArrayBuffer);
-        break;
+        const byteOffset = x + y * imageWidth;
+        data[canvasOffset] = imageDataBytes[byteOffset];
+        data[canvasOffset + 1] = imageDataBytes[byteOffset];
+        data[canvasOffset + 2] = imageDataBytes[byteOffset];
       }
+    }
 
-      case 2: {
-        const header = this.arrayBuffer.slice(0, this.imageDataFieldOffset);
-        let footer;
-        
-        if (this.extensionOffset !== 0) {
-          footer = this.arrayBuffer.slice(this.extensionOffset);
-        } else {
-          footer = this.arrayBuffer.slice(-26);
+    console.timeEnd('uncompressed loop');
+  }
+
+  private drawUncompressed(imageData: ImageData) {
+    console.time('uncompressed loop');
+    const { imageHeight, imageWidth, pixelSize, topToBottom } = this.stats;
+    const { data } = imageData;
+    const { imageDataBytes } = this;
+
+    for (let y = 0; y < imageHeight; ++y) {
+      for (let x = 0; x < imageWidth; ++x) {
+        const canvasOffset = topToBottom
+          ? y * imageWidth * 4 + x * 4
+          : (imageHeight - y - 1) * imageWidth * 4 + x * 4;
+
+        data[canvasOffset + 3] = 255;
+
+        switch (pixelSize) {
+          case 3: {
+            const byteOffset = y * imageWidth * 3 + x * 3;
+            data[canvasOffset] = imageDataBytes[byteOffset + 2];
+            data[canvasOffset + 1] = imageDataBytes[byteOffset + 1];
+            data[canvasOffset + 2] = imageDataBytes[byteOffset];
+            break;
+          }
+
+          case 4: {
+            const byteOffset = y * imageWidth * 4 + x * 4;
+            data[canvasOffset] = imageDataBytes[byteOffset + 3];
+            data[canvasOffset + 1] = imageDataBytes[byteOffset + 2];
+            data[canvasOffset + 2] = imageDataBytes[byteOffset + 1];
+            data[canvasOffset + 3] = imageDataBytes[byteOffset];
+            break;
+          }
+        }
+      }
+    }
+
+    console.timeEnd('uncompressed loop');
+  }
+
+  private drawRunLengthEncoded(imageData: ImageData) {
+    console.time('run length encoded loop');
+    const { imageHeight, imageWidth, pixelSize, topToBottom } = this.stats;
+    const { data } = imageData;
+    const { imageDataBytes, dataView } = this;
+    const readArrayLength = imageDataBytes.length;
+    let readCursor = 0;
+    let x = 0;
+    let y = 0;
+    let byte1;
+    let byte2;
+    let byte3;
+    let byte4;
+
+    for (let i = 0; i < readArrayLength; ++i) {
+      const packet = imageDataBytes[readCursor++];
+
+      // RLE packet
+      if (packet >= 128) {
+        const repetition = packet - 128;
+        byte1 = imageDataBytes[readCursor++];
+
+        if (pixelSize > 2) {
+          byte2 = imageDataBytes[readCursor++];
+          byte3 = imageDataBytes[readCursor++];
         }
 
-        this.arrayBuffer = concatArrayBuffers(header, decodedArrayBuffer, footer);
-        break;
-      }
+        if (pixelSize > 3) {
+          byte4 = imageDataBytes[readCursor++];
+        }
 
-      // no default
-    }
-  }
+        for (let i = 0; i <= repetition; ++i) {
+          const canvasOffset = topToBottom
+            ? y * imageWidth * 4 + x * 4
+            : (imageHeight - y - 1) * imageWidth * 4 + x * 4;
 
-  private getImageDataFieldOffset(): number {
-    switch (this.colorMapType) {
-      case 0:
-        return 18 + this.imageIdentificationFieldLength;
+          data[canvasOffset + 3] = 255;
 
-      case 1:
-        return 18 + this.imageIdentificationFieldLength + this.colorMapLength * this.colorMapPixelSize;
+          switch (pixelSize) {
+            case 1: {
+              data[canvasOffset] = byte1;
+              data[canvasOffset + 1] = byte1;
+              data[canvasOffset + 2] = byte1;
+              break;
+            }
 
-      default:
-        throw new Error(`Color Map Type "${this.colorMapType}" is not supported!`);
-    }
-  }
+            case 3: {
+              data[canvasOffset] = byte3;
+              data[canvasOffset + 1] = byte2;
+              data[canvasOffset + 2] = byte1;
+              break;
+            }
 
-  isTopToBottom(): boolean {
-    return (this.imageDescriptor & ImageDescriptorFields.TOP_TO_BOTTOM) === ImageDescriptorFields.TOP_TO_BOTTOM;
-  }
+            case 4: {
+              data[canvasOffset] = byte3;
+              data[canvasOffset + 1] = byte2;
+              data[canvasOffset + 2] = byte1;
+              data[canvasOffset + 3] = byte4;
+              break;
+            }
+          }
 
-  private getPixelOffset(x: number, y: number): number {
-    let offset;
-
-    if (this.isTopToBottom()) {
-      offset = y * this.imageWidth * this.pixelSize + x * this.pixelSize;
-    } else {
-      offset = (this.imageHeight - y - 1) * this.imageWidth * this.pixelSize + x * this.pixelSize;
-    }
-
-    offset += this.imageDataFieldOffset;
-
-    if (this.colorMapType === 0) {
-      return offset;
-    }
-
-    if (this.colorMapType === 1) {
-      if (this.pixelSize === 2) {
-        offset = this.dataView.getUint16(offset, true);
+          if (x === imageWidth - 1) {
+            x = 0;
+            y += 1;
+          } else {
+            x += 1;
+          }
+        }
       } else {
-        offset = this.bytes[offset];
-      }
+        // raw packet
+        const repetition = packet;
 
-      return 18 + this.imageIdentificationFieldLength + this.colorMapOrigin + offset * this.colorMapPixelSize;
+        for (let i = 0; i <= repetition; ++i) {
+          const canvasOffset = topToBottom
+            ? y * imageWidth * 4 + x * 4
+            : (imageHeight - y - 1) * imageWidth * 4 + x * 4;
+
+          data[canvasOffset + 3] = 255;
+
+          switch (pixelSize) {
+            case 1: {
+              data[canvasOffset] = imageDataBytes[readCursor];
+              data[canvasOffset + 1] = imageDataBytes[readCursor];
+              data[canvasOffset + 2] = imageDataBytes[readCursor];
+              readCursor += 1;
+              break;
+            }
+
+            case 3: {
+              data[canvasOffset] = imageDataBytes[readCursor + 2];
+              data[canvasOffset + 1] = imageDataBytes[readCursor + 1];
+              data[canvasOffset + 2] = imageDataBytes[readCursor];
+              readCursor += 3;
+              break;
+            }
+
+            case 4: {
+              data[canvasOffset] = imageDataBytes[readCursor + 2];
+              data[canvasOffset + 1] = imageDataBytes[readCursor + 1];
+              data[canvasOffset + 2] = imageDataBytes[readCursor];
+              data[canvasOffset + 3] = imageDataBytes[readCursor + 3];
+              readCursor += 4;
+              break;
+            }
+          }
+
+          if (x === imageWidth - 1) {
+            x = 0;
+            y += 1;
+          } else {
+            x += 1;
+          }
+        }
+      }
     }
 
-    throw new Error(`Color map type ${this.colorMapType} is not supported`);
+    console.timeEnd('run length encoded loop');
   }
 
-  private getPixelColor( x: number, y: number): Color {
-    const pixelSize = this.colorMapType === 0 ? this.pixelSize : this.colorMapPixelSize;
-    const offset = this.getPixelOffset(x, y);
+  private drawColorMapped(imageData: ImageData) {
+    console.time('color mapped loop');
+    const {
+      imageHeight,
+      imageWidth,
+      pixelSize,
+      topToBottom,
+      colorMapPixelSize,
+      colorMapOrigin,
+      imageIdentificationFieldLength,
+      imageDataFieldOffset,
+    } = this.stats;
+    const { data } = imageData;
+    const { imageDataBytes, bytes, dataView } = this;
+    const padding = 18 + imageIdentificationFieldLength + colorMapOrigin;
 
-    switch (pixelSize) {
-      case 1: {
-        const value = this.bytes[offset];
-        return { red: value, green: value, blue: value, alpha: 255 };
+    for (let y = 0; y < imageHeight; ++y) {
+      for (let x = 0; x < imageWidth; ++x) {
+        const canvasOffset = topToBottom
+          ? y * imageWidth * 4 + x * 4
+          : (imageHeight - y - 1) * imageWidth * 4 + x * 4;
+
+        data[canvasOffset + 3] = 255;
+
+        const byteOffset = y * imageWidth * pixelSize + x * pixelSize;
+        const colorMapEntryOffset =
+          padding +
+          colorMapPixelSize *
+            (pixelSize === 1
+              ? imageDataBytes[byteOffset]
+              : dataView.getUint16(imageDataFieldOffset + byteOffset, true));
+
+        switch (colorMapPixelSize) {
+          case 1: {
+            data[canvasOffset] = bytes[colorMapEntryOffset];
+            data[canvasOffset + 1] = bytes[colorMapEntryOffset];
+            data[canvasOffset + 2] = bytes[colorMapEntryOffset];
+            break;
+          }
+
+          case 3: {
+            data[canvasOffset] = bytes[colorMapEntryOffset + 2];
+            data[canvasOffset + 1] = bytes[colorMapEntryOffset + 1];
+            data[canvasOffset + 2] = bytes[colorMapEntryOffset];
+            break;
+          }
+
+          case 4: {
+            data[canvasOffset] = bytes[colorMapEntryOffset + 2];
+            data[canvasOffset + 1] = bytes[colorMapEntryOffset + 1];
+            data[canvasOffset + 2] = bytes[colorMapEntryOffset];
+            data[canvasOffset + 3] = bytes[colorMapEntryOffset + 3];
+            break;
+          }
+        }
       }
-
-      case 3: {
-        const blue = this.bytes[offset];
-        const green = this.bytes[offset + 1];
-        const red = this.bytes[offset + 2];
-
-        // canvas requires an alpha value. Sending 255 for a fully opaque pixel.
-        return { red, green, blue, alpha: 255 };
-      }
-
-      case 4: {
-        const blue = this.bytes[offset];
-        const green = this.bytes[offset + 1];
-        const red = this.bytes[offset + 2];
-        const alpha = this.bytes[offset + 3];
-        return { blue, green, red, alpha };
-      }
-
-      default:
-        throw new Error(`Pixel Size (${this.pixelSize}) is not supported!`);
     }
+
+    console.timeEnd('color mapped loop');
   }
 
-  static getCanvasBackgroundColor(x: number, y: number): Color {
-    const evenX = Math.floor(x / this.GRID_SIZE) % 2 === 0;
-    const evenY = Math.floor(y / this.GRID_SIZE) % 2 === 0;
+  private drawRunLengthEncodedColorMapped(imageData: ImageData) {
+    console.time('run length encoded color mapped loop');
+    const { imageHeight, imageWidth, pixelSize, topToBottom, imageIdentificationFieldLength, colorMapOrigin, imageDataFieldOffset, colorMapPixelSize } = this.stats;
+    const { data } = imageData;
+    const { imageDataBytes, bytes, dataView } = this;
+    const readArrayLength = imageDataBytes.length;
+    const padding = 18 + imageIdentificationFieldLength + colorMapOrigin;
+    let readCursor = 0;
+    let x = 0;
+    let y = 0;
+    let byte1 = 0;
+    let byte2 = 0;
+    let byte3 = 0;
+    let byte4 = 0;
+    let colorMapEntryOffset: number = 0;
 
-    if (Number(evenX) ^ Number(evenY)) {
-      return { red: 100, green: 100, blue: 100, alpha: 255 };
+    for (let i = 0; i < readArrayLength; ++i) {
+      const packet = imageDataBytes[readCursor++];
+
+      // RLE packet
+      if (packet >= 128) {
+        if (pixelSize === 1) {
+          colorMapEntryOffset = padding + colorMapPixelSize * imageDataBytes[readCursor++];
+        } else {
+          colorMapEntryOffset = padding + colorMapPixelSize * dataView.getUint16(imageDataFieldOffset + readCursor, true);
+          readCursor += 2;
+        }
+
+        const repetition = packet - 128;
+        byte1 = bytes[colorMapEntryOffset];
+
+        if (colorMapPixelSize > 2) {
+          byte2 = bytes[colorMapEntryOffset + 1];
+          byte3 = bytes[colorMapEntryOffset + 2];
+        }
+
+        if (colorMapPixelSize > 3) {
+          byte4 = bytes[colorMapEntryOffset + 3];
+        }
+
+        for (let i = 0; i <= repetition; ++i) {
+          const canvasOffset = topToBottom
+            ? y * imageWidth * 4 + x * 4
+            : (imageHeight - y - 1) * imageWidth * 4 + x * 4;
+
+          data[canvasOffset + 3] = 255;
+
+          switch (colorMapPixelSize) {
+            case 1: {
+              data[canvasOffset] = byte1;
+              data[canvasOffset + 1] = byte1;
+              data[canvasOffset + 2] = byte1;
+              break;
+            }
+
+            case 3: {
+              data[canvasOffset] = byte3;
+              data[canvasOffset + 1] = byte2;
+              data[canvasOffset + 2] = byte1;
+              break;
+            }
+
+            case 4: {
+              data[canvasOffset] = byte3;
+              data[canvasOffset + 1] = byte2;
+              data[canvasOffset + 2] = byte1;
+              data[canvasOffset + 3] = byte4;
+              break;
+            }
+          }
+
+          if (x === imageWidth - 1) {
+            x = 0;
+            y += 1;
+          } else {
+            x += 1;
+          }
+        }
+      } else {
+        // raw packet
+        const repetition = packet;
+
+        for (let i = 0; i <= repetition; ++i) {
+          const canvasOffset = topToBottom
+            ? y * imageWidth * 4 + x * 4
+            : (imageHeight - y - 1) * imageWidth * 4 + x * 4;
+
+          if (pixelSize === 1) {
+            colorMapEntryOffset = padding + colorMapPixelSize * imageDataBytes[readCursor++];
+          } else {
+            colorMapEntryOffset = padding + colorMapPixelSize * dataView.getUint16(imageDataFieldOffset + readCursor, true);
+            readCursor += 2;
+          }
+
+          data[canvasOffset + 3] = 255;
+
+          switch (colorMapPixelSize) {
+            case 1: {
+              data[canvasOffset] = bytes[colorMapEntryOffset];
+              data[canvasOffset + 1] = bytes[colorMapEntryOffset];
+              data[canvasOffset + 2] = bytes[colorMapEntryOffset];
+              break;
+            }
+
+            case 3: {
+              data[canvasOffset] = bytes[colorMapEntryOffset + 2];
+              data[canvasOffset + 1] = bytes[colorMapEntryOffset + 1];
+              data[canvasOffset + 2] = bytes[colorMapEntryOffset];
+              break;
+            }
+
+            case 4: {
+              data[canvasOffset] = bytes[colorMapEntryOffset + 2];
+              data[canvasOffset + 1] = bytes[colorMapEntryOffset + 1];
+              data[canvasOffset + 2] = bytes[colorMapEntryOffset];
+              data[canvasOffset + 3] = bytes[colorMapEntryOffset + 3];
+              break;
+            }
+          }
+
+          if (x === imageWidth - 1) {
+            x = 0;
+            y += 1;
+          } else {
+            x += 1;
+          }
+        }
+      }
     }
 
-    return { red: 180, green: 180, blue: 180, alpha: 255 };
+    console.timeEnd('run length encoded color mapped loop');
   }
 
-  static blendColors(backgroundColor: Color, color: Color): Color {
-    const colorPercentage = color.alpha / 255;
-    const bgPercentage = 1 - colorPercentage;
-
-    return {
-      red: Math.min(255, color.red * colorPercentage + backgroundColor.red * bgPercentage),
-      green: Math.min(255, color.green * colorPercentage + backgroundColor.green * bgPercentage),
-      blue: Math.min(255, color.blue * colorPercentage + backgroundColor.blue * bgPercentage),
-      alpha: 255,
-    };
-  }
-
-  draw(canvas: HTMLCanvasElement) {
-    const begin = performance.now();
+  async draw(canvas: HTMLCanvasElement) {
+    console.time('draw');
     const context = canvas.getContext('2d');
 
     if (!context) {
@@ -220,28 +421,58 @@ export default class TGAImage {
     }
 
     context.clearRect(0, 0, canvas.width, canvas.height);
-    canvas.width = this.imageWidth;
-    canvas.height = this.imageHeight;
+    canvas.width = this.stats.imageWidth;
+    canvas.height = this.stats.imageHeight;
+    context.fillStyle = 'rgba(40, 40, 40, 255)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
 
-    const imageData = context.createImageData(this.imageWidth, this.imageHeight);
+    const imageData = context.createImageData(this.stats.imageWidth, this.stats.imageHeight);
+    const begin = performance.now();
 
-    for (let y = 0; y < this.imageHeight; ++y) {
-      for (let x = 0; x < this.imageWidth; ++x) {
-        const color = this.getPixelColor(x, y);
-        const canvasOffset = y * this.imageWidth * 4 + x * 4;
-
-        const backgroundColor = TGAImage.getCanvasBackgroundColor(x, y);
-        const blended = TGAImage.blendColors(backgroundColor, color);
-
-        imageData.data[canvasOffset] = blended.red;
-        imageData.data[canvasOffset + 1] = blended.green;
-        imageData.data[canvasOffset + 2] = blended.blue;
-        imageData.data[canvasOffset + 3] = blended.alpha;
+    if (this.stats.rleEncoded) {
+      if (this.stats.imageType === ImageType.RUN_LENGTH_ENCODED_COLOR_MAPPED) {
+        this.drawRunLengthEncodedColorMapped(imageData);
+      } else {
+        this.drawRunLengthEncoded(imageData);
+      }
+    } else {
+      if (this.stats.imageType === ImageType.COLOR_MAPPED) {
+        this.drawColorMapped(imageData);
+      } else {
+        if (this.stats.pixelSize === 1) {
+          this.drawUncompressedGrayscale(imageData);
+        } else {
+          this.drawUncompressed(imageData);
+        }
       }
     }
 
-    context.putImageData(imageData, 0, 0);
-    const end = performance.now();
-    this.durations.CanvasDrawDuration = end - begin;
+    if (this.stats.pixelSize === 4) {
+      const { GRID_SIZE } = TGAImage;
+      const { imageWidth, imageHeight } = this.stats;
+      let evenRow = 0;
+
+      for (let y = 0; y < imageHeight; y += GRID_SIZE) {
+        let evenColumn = 0;
+
+        for (let x = 0; x < imageWidth; x += GRID_SIZE) {
+          context.fillStyle = evenRow ^ evenColumn ? 'rgba(180, 180, 180, 1)' : 'rgba(100, 100, 100, 1)';
+          context.fillRect(x, y, GRID_SIZE, GRID_SIZE);
+          evenColumn = evenColumn === 1 ? 0 : 1;
+        }
+
+        evenRow = evenRow === 1 ? 0 : 1;
+      }
+
+      const bitmap = await createImageBitmap(imageData, { premultiplyAlpha: 'premultiply' });
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close();
+    } else {
+      context.putImageData(imageData, 0, 0);
+    }
+
+    this.stats.duration = performance.now() - begin;
+    console.info(this.stats.duration);
+    console.timeEnd('draw');
   }
 }

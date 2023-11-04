@@ -1,5 +1,5 @@
-import { readFile, generateImageInformationTable } from "./utils";
-import TGAImage from "./TGAImage";
+import { readFile, generateImageInformationTable } from './utils';
+import TGAImage from './TGAImage';
 
 // Esbuild Live Reload
 new EventSource('/esbuild').addEventListener('change', () => location.reload());
@@ -7,7 +7,7 @@ new EventSource('/esbuild').addEventListener('change', () => location.reload());
 const fileInput = document.querySelector('input[type=file]') as HTMLInputElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const table = document.querySelector('table') as HTMLTableElement;
-const template = document.querySelector("#row") as HTMLTemplateElement;
+const template = document.querySelector('#row') as HTMLTemplateElement;
 
 function populateStatsTable(tga: TGAImage) {
   table.innerHTML = '';
@@ -30,7 +30,9 @@ async function drawToCanvas() {
   try {
     const { files } = fileInput;
 
-    if (!files?.length) { return; }
+    if (!files?.length) {
+      return;
+    }
 
     const file = files.item(0);
 
@@ -38,9 +40,12 @@ async function drawToCanvas() {
 
     const arrayBuffer = await readFile(file);
     const tga = new TGAImage(arrayBuffer);
-    
-    populateStatsTable(tga);
-    tga.draw(canvas);
+
+    tga.draw(canvas)
+      .then(() => {
+        populateStatsTable(tga);
+      })
+      .catch(console.trace);
   } catch (ex) {
     alert(ex.message);
   }

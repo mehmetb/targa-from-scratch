@@ -1,23 +1,6 @@
 import { ImageType } from './types';
 import TGAImage from './TGAImage';
 
-export function concatArrayBuffers(...buffers: ArrayBuffer[]): ArrayBuffer {
-  const totalLength = buffers.reduce((acc, buffer) => acc + buffer.byteLength, 0);
-  const resultBuffer = new ArrayBuffer(totalLength);
-  const resultArray = new Uint8Array(resultBuffer);
-  let index = 0;
-
-  for (const buffer of buffers) {
-    const arr = new Uint8Array(buffer);
-
-    for (const elem of arr) {
-      resultArray[index++] = elem;
-    }
-  }
-
-  return resultBuffer;
-}
-
 export function readFile(file: File): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
@@ -41,28 +24,29 @@ function capitalize(str: string): string {
 
 export function generateImageInformationTable(tga: TGAImage) {
   const stats = {
-    version: tga.version,
-    imageType: capitalize(ImageType[tga.imageType].toLowerCase().replace(/_/g, ' ')),
-    xOrigin: tga.xOrigin,
-    yOrigin: tga.yOrigin,
-    imageWidth: tga.imageWidth,
-    imageHeight: tga.imageHeight,
-    pixelSize: tga.pixelSize,
-    imageDescriptor: tga.imageDescriptor.toString(2).padStart(8, '0'),
-    imageIdentificationFieldLength: tga.imageIdentificationFieldLength,
-    topToBottom: tga.isTopToBottom(),
-    colorMapOrigin: tga.colorMapOrigin,
-    colorMapLength: tga.colorMapLength,
-    colorMapPixelSize: tga.colorMapPixelSize,
-    RLEDecodeDuration: `${tga.durations.RLEDecodeDuration} ms`,
-    DrawDuration: `${tga.durations.CanvasDrawDuration} ms`,
+    version: tga.stats.version,
+    imageType: capitalize(ImageType[tga.stats.imageType].toLowerCase().replace(/_/g, ' ')),
+    xOrigin: tga.stats.xOrigin,
+    yOrigin: tga.stats.yOrigin,
+    imageWidth: tga.stats.imageWidth,
+    imageHeight: tga.stats.imageHeight,
+    pixelSize: tga.stats.pixelSize,
+    imageDescriptor: tga.stats.imageDescriptor.toString(2).padStart(8, '0'),
+    imageIdentificationFieldLength: tga.stats.imageIdentificationFieldLength,
+    topToBottom: tga.stats.isTopToBottom(),
+    colorMapOrigin: tga.stats.colorMapOrigin,
+    colorMapLength: tga.stats.colorMapLength,
+    colorMapPixelSize: tga.stats.colorMapPixelSize,
+    processingTook: `${tga.stats.duration} ms`,
   };
 
   const rows: { [key: string]: string } = {};
 
   for (const [key, value] of Object.entries(stats)) {
     const firsCharacter = key[0];
-    const field = `${firsCharacter.toUpperCase()}${key.replace(/(?!\b[A-Z])([A-Z])/g, ' $1').substring(1)}`;
+    const field = `${firsCharacter.toUpperCase()}${key
+      .replace(/(?!\b[A-Z])([A-Z])/g, ' $1')
+      .substring(1)}`;
 
     if (typeof value === 'boolean') {
       rows[field] = value ? 'Yes' : 'No';
