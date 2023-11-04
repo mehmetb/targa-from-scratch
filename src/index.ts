@@ -41,8 +41,11 @@ async function drawToCanvas() {
     const arrayBuffer = await readFile(file);
     const tga = new TGAImage(arrayBuffer);
 
-    tga.draw(canvas);
-    populateStatsTable(tga);
+    tga.draw(canvas)
+      .then(() => {
+        populateStatsTable(tga);
+      })
+      .catch(console.trace);
   } catch (ex) {
     alert(ex.message);
   }

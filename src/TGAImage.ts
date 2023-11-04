@@ -64,7 +64,6 @@ export default class TGAImage {
     const { imageHeight, imageWidth, pixelSize, topToBottom } = this.stats;
     const { data } = imageData;
     const { imageDataBytes } = this;
-    const { GRID_SIZE } = TGAImage;
 
     for (let y = 0; y < imageHeight; ++y) {
       for (let x = 0; x < imageWidth; ++x) {
@@ -85,38 +84,10 @@ export default class TGAImage {
 
           case 4: {
             const byteOffset = y * imageWidth * 4 + x * 4;
-
-            if (imageDataBytes[byteOffset + 3] === 255) {
-              data[canvasOffset] = imageDataBytes[byteOffset + 3];
-              data[canvasOffset + 1] = imageDataBytes[byteOffset + 2];
-              data[canvasOffset + 2] = imageDataBytes[byteOffset + 1];
-            } else {
-              const blue = imageDataBytes[byteOffset];
-              const green = imageDataBytes[byteOffset + 1];
-              const red = imageDataBytes[byteOffset + 2];
-              const alpha = imageDataBytes[byteOffset + 3];
-              const evenX = Number(Math.floor(x / GRID_SIZE) % 2 === 0);
-              const evenY = Number(Math.floor(y / GRID_SIZE) % 2 === 0);
-              const colorPercentage = alpha / 255;
-              const bgPercentage = 1 - colorPercentage;
-
-              if (evenX ^ evenY) {
-                data[canvasOffset] = Math.min(255, red * colorPercentage + 100 * bgPercentage);
-                data[canvasOffset + 1] = Math.min(
-                  255,
-                  green * colorPercentage + 100 * bgPercentage,
-                );
-                data[canvasOffset + 2] = Math.min(255, blue * colorPercentage + 100 * bgPercentage);
-              } else {
-                data[canvasOffset] = Math.min(255, red * colorPercentage + 180 * bgPercentage);
-                data[canvasOffset + 1] = Math.min(
-                  255,
-                  green * colorPercentage + 180 * bgPercentage,
-                );
-                data[canvasOffset + 2] = Math.min(255, blue * colorPercentage + 180 * bgPercentage);
-              }
-            }
-
+            data[canvasOffset] = imageDataBytes[byteOffset + 3];
+            data[canvasOffset + 1] = imageDataBytes[byteOffset + 2];
+            data[canvasOffset + 2] = imageDataBytes[byteOffset + 1];
+            data[canvasOffset + 3] = imageDataBytes[byteOffset];
             break;
           }
         }
@@ -130,8 +101,7 @@ export default class TGAImage {
     console.time('run length encoded loop');
     const { imageHeight, imageWidth, pixelSize, topToBottom } = this.stats;
     const { data } = imageData;
-    const { imageDataBytes } = this;
-    const { GRID_SIZE } = TGAImage;
+    const { imageDataBytes, dataView } = this;
     const readArrayLength = imageDataBytes.length;
     let readCursor = 0;
     let x = 0;
@@ -181,39 +151,10 @@ export default class TGAImage {
             }
 
             case 4: {
-              if (byte4 === 255) {
-                data[canvasOffset] = byte3;
-                data[canvasOffset + 1] = byte2;
-                data[canvasOffset + 2] = byte1;
-              } else {
-                const evenX = Number(Math.floor(x / GRID_SIZE) % 2 === 0);
-                const evenY = Number(Math.floor(y / GRID_SIZE) % 2 === 0);
-                const colorPercentage = byte4 / 255;
-                const bgPercentage = 1 - colorPercentage;
-
-                if (evenX ^ evenY) {
-                  data[canvasOffset] = Math.min(255, byte3 * colorPercentage + 100 * bgPercentage);
-                  data[canvasOffset + 1] = Math.min(
-                    255,
-                    byte2 * colorPercentage + 100 * bgPercentage,
-                  );
-                  data[canvasOffset + 2] = Math.min(
-                    255,
-                    byte1 * colorPercentage + 100 * bgPercentage,
-                  );
-                } else {
-                  data[canvasOffset] = Math.min(255, byte3 * colorPercentage + 180 * bgPercentage);
-                  data[canvasOffset + 1] = Math.min(
-                    255,
-                    byte2 * colorPercentage + 180 * bgPercentage,
-                  );
-                  data[canvasOffset + 2] = Math.min(
-                    255,
-                    byte1 * colorPercentage + 180 * bgPercentage,
-                  );
-                }
-              }
-
+              data[canvasOffset] = byte3;
+              data[canvasOffset + 1] = byte2;
+              data[canvasOffset + 2] = byte1;
+              data[canvasOffset + 3] = byte4;
               break;
             }
           }
@@ -254,31 +195,11 @@ export default class TGAImage {
             }
 
             case 4: {
-              const blue = imageDataBytes[readCursor++];
-              const green = imageDataBytes[readCursor++];
-              const red = imageDataBytes[readCursor++];
-              const alpha = imageDataBytes[readCursor++];
-              const evenX = Number(Math.floor(x / GRID_SIZE) % 2 === 0);
-              const evenY = Number(Math.floor(y / GRID_SIZE) % 2 === 0);
-              const colorPercentage = alpha / 255;
-              const bgPercentage = 1 - colorPercentage;
-
-              if (evenX ^ evenY) {
-                data[canvasOffset] = Math.min(255, red * colorPercentage + 100 * bgPercentage);
-                data[canvasOffset + 1] = Math.min(
-                  255,
-                  green * colorPercentage + 100 * bgPercentage,
-                );
-                data[canvasOffset + 2] = Math.min(255, blue * colorPercentage + 100 * bgPercentage);
-              } else {
-                data[canvasOffset] = Math.min(255, red * colorPercentage + 180 * bgPercentage);
-                data[canvasOffset + 1] = Math.min(
-                  255,
-                  green * colorPercentage + 180 * bgPercentage,
-                );
-                data[canvasOffset + 2] = Math.min(255, blue * colorPercentage + 180 * bgPercentage);
-              }
-
+              data[canvasOffset] = imageDataBytes[readCursor + 2];
+              data[canvasOffset + 1] = imageDataBytes[readCursor + 1];
+              data[canvasOffset + 2] = imageDataBytes[readCursor];
+              data[canvasOffset + 3] = imageDataBytes[readCursor + 3];
+              readCursor += 4;
               break;
             }
           }
@@ -310,7 +231,6 @@ export default class TGAImage {
     } = this.stats;
     const { data } = imageData;
     const { imageDataBytes, bytes, dataView } = this;
-    const { GRID_SIZE } = TGAImage;
     const padding = 18 + imageIdentificationFieldLength + colorMapOrigin;
 
     for (let y = 0; y < imageHeight; ++y) {
@@ -345,37 +265,10 @@ export default class TGAImage {
           }
 
           case 4: {
-            if (bytes[colorMapEntryOffset + 3] === 255) {
-              data[canvasOffset] = bytes[colorMapEntryOffset + 3];
-              data[canvasOffset + 1] = bytes[colorMapEntryOffset + 2];
-              data[canvasOffset + 2] = bytes[colorMapEntryOffset + 1];
-            } else {
-              const blue = bytes[colorMapEntryOffset];
-              const green = bytes[colorMapEntryOffset + 1];
-              const red = bytes[colorMapEntryOffset + 2];
-              const alpha = bytes[colorMapEntryOffset + 3];
-              const evenX = Number(Math.floor(x / GRID_SIZE) % 2 === 0);
-              const evenY = Number(Math.floor(y / GRID_SIZE) % 2 === 0);
-              const colorPercentage = alpha / 255;
-              const bgPercentage = 1 - colorPercentage;
-
-              if (evenX ^ evenY) {
-                data[canvasOffset] = Math.min(255, red * colorPercentage + 100 * bgPercentage);
-                data[canvasOffset + 1] = Math.min(
-                  255,
-                  green * colorPercentage + 100 * bgPercentage,
-                );
-                data[canvasOffset + 2] = Math.min(255, blue * colorPercentage + 100 * bgPercentage);
-              } else {
-                data[canvasOffset] = Math.min(255, red * colorPercentage + 180 * bgPercentage);
-                data[canvasOffset + 1] = Math.min(
-                  255,
-                  green * colorPercentage + 180 * bgPercentage,
-                );
-                data[canvasOffset + 2] = Math.min(255, blue * colorPercentage + 180 * bgPercentage);
-              }
-            }
-
+            data[canvasOffset] = bytes[colorMapEntryOffset + 2];
+            data[canvasOffset + 1] = bytes[colorMapEntryOffset + 1];
+            data[canvasOffset + 2] = bytes[colorMapEntryOffset];
+            data[canvasOffset + 3] = bytes[colorMapEntryOffset + 3];
             break;
           }
         }
@@ -530,6 +423,8 @@ export default class TGAImage {
     context.clearRect(0, 0, canvas.width, canvas.height);
     canvas.width = this.stats.imageWidth;
     canvas.height = this.stats.imageHeight;
+    context.fillStyle = 'rgba(40, 40, 40, 255)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
 
     const imageData = context.createImageData(this.stats.imageWidth, this.stats.imageHeight);
     const begin = performance.now();
@@ -552,8 +447,31 @@ export default class TGAImage {
       }
     }
 
+    if (this.stats.pixelSize === 4) {
+      const { GRID_SIZE } = TGAImage;
+      const { imageWidth, imageHeight } = this.stats;
+      let evenRow = 0;
+
+      for (let y = 0; y < imageHeight; y += GRID_SIZE) {
+        let evenColumn = 0;
+
+        for (let x = 0; x < imageWidth; x += GRID_SIZE) {
+          context.fillStyle = evenRow ^ evenColumn ? 'rgba(180, 180, 180, 1)' : 'rgba(100, 100, 100, 1)';
+          context.fillRect(x, y, GRID_SIZE, GRID_SIZE);
+          evenColumn = evenColumn === 1 ? 0 : 1;
+        }
+
+        evenRow = evenRow === 1 ? 0 : 1;
+      }
+
+      const bitmap = await createImageBitmap(imageData, { premultiplyAlpha: 'premultiply' });
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close();
+    } else {
+      context.putImageData(imageData, 0, 0);
+    }
+
     this.stats.duration = performance.now() - begin;
-    context.putImageData(imageData, 0, 0);
     console.info(this.stats.duration);
     console.timeEnd('draw');
   }
