@@ -113,6 +113,9 @@ export default class TGAImage {
     const { data } = imageData;
     const { imageDataBytes, dataView } = this;
     const readArrayLength = imageDataBytes.length;
+    const ab = new ArrayBuffer(2);
+    const ua = new Uint8Array(ab);
+    const dv = new DataView(ab);
     let hasAlpha = true;
     let readCursor = 0;
     let x = 0;
@@ -132,15 +135,29 @@ export default class TGAImage {
       // RLE packet
       if (packet >= 128) {
         const repetition = packet - 128;
-        byte1 = imageDataBytes[readCursor++];
 
-        if (pixelSize > 2) {
-          byte2 = imageDataBytes[readCursor++];
-          byte3 = imageDataBytes[readCursor++];
-        }
+        switch (pixelSize) {
+          case 1:
+            byte1 = imageDataBytes[readCursor++];
+            break;
 
-        if (pixelSize > 3) {
-          byte4 = imageDataBytes[readCursor++];
+          case 2:
+            byte1 = imageDataBytes[readCursor++];
+            byte2 = imageDataBytes[readCursor++];
+            break;
+
+          case 3:
+            byte1 = imageDataBytes[readCursor++];
+            byte2 = imageDataBytes[readCursor++];
+            byte3 = imageDataBytes[readCursor++];
+            break;
+
+          case 4:
+            byte1 = imageDataBytes[readCursor++];
+            byte2 = imageDataBytes[readCursor++];
+            byte3 = imageDataBytes[readCursor++];
+            byte4 = imageDataBytes[readCursor++];
+            break;
         }
 
         for (let i = 0; i <= repetition; ++i) {
@@ -155,6 +172,23 @@ export default class TGAImage {
               data[canvasOffset] = byte1;
               data[canvasOffset + 1] = byte1;
               data[canvasOffset + 2] = byte1;
+              break;
+            }
+
+            case 2: {
+              ua[0] = byte1;
+              ua[1] = byte2;
+              const byteValue = dv.getUint16(0, true);
+
+              if (imageType === ImageType.RUN_LENGTH_ENCODED_GRAY_SCALE) {
+                data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+                data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+                data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+              } else {
+                data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+                data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 9);
+                data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 4);
+              }
               break;
             }
 
@@ -205,6 +239,23 @@ export default class TGAImage {
               break;
             }
 
+            case 2: {
+              ua[0] = imageDataBytes[readCursor++];
+              ua[1] = imageDataBytes[readCursor++];
+              const byteValue = dv.getUint16(0, true);
+
+              if (imageType === ImageType.RUN_LENGTH_ENCODED_GRAY_SCALE) {
+                data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+                data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+                data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+              } else {
+                data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+                data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 9);
+                data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 4);
+              }
+              break;
+            }
+
             case 3: {
               data[canvasOffset] = imageDataBytes[readCursor + 2];
               data[canvasOffset + 1] = imageDataBytes[readCursor + 1];
@@ -236,7 +287,12 @@ export default class TGAImage {
         }
       }
     }
-
+            console.log({
+              red: data[0],
+              green: data[1],
+              blue: data[2],
+              alpha: data[3],
+            });
     console.timeEnd('run length encoded loop');
   }
 
@@ -277,6 +333,14 @@ export default class TGAImage {
             data[canvasOffset] = bytes[colorMapEntryOffset];
             data[canvasOffset + 1] = bytes[colorMapEntryOffset];
             data[canvasOffset + 2] = bytes[colorMapEntryOffset];
+            break;
+          }
+
+          case 2: {
+            const byteValue = dataView.getUint16(colorMapEntryOffset, true)
+            data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+            data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 9);
+            data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 4);
             break;
           }
 
@@ -356,6 +420,14 @@ export default class TGAImage {
               break;
             }
 
+            case 2: {
+              const byteValue = dataView.getUint16(colorMapEntryOffset, true)
+              data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+              data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 9);
+              data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 4);
+              break;
+            }
+
             case 3: {
               data[canvasOffset] = byte3;
               data[canvasOffset + 1] = byte2;
@@ -402,6 +474,14 @@ export default class TGAImage {
               data[canvasOffset] = bytes[colorMapEntryOffset];
               data[canvasOffset + 1] = bytes[colorMapEntryOffset];
               data[canvasOffset + 2] = bytes[colorMapEntryOffset];
+              break;
+            }
+
+            case 2: {
+              const byteValue = dataView.getUint16(colorMapEntryOffset, true)
+              data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+              data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 9);
+              data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 4);
               break;
             }
 
