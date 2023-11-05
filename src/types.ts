@@ -9,5 +9,10 @@ export enum ImageType {
 }
 
 export enum ImageDescriptorFields {
-  TOP_TO_BOTTOM = 16, // byte: 00010000
+export enum AttributesType {
+  NO_ALPHA_DATA = 0,
+  UNDEFINED_IGNORED = 1,
+  UNDEFINED_RETAINED = 2,
+  USEFUL_ALPHA_CHANNEL = 3,
+  PREMULTIPLIED_ALPHA = 4,
 }

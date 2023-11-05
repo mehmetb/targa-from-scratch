@@ -1,5 +1,6 @@
-import { ImageType } from './types';
+import { ImageType, AttributesType } from './types';
 import { ImageStats } from './ImageStats';
+import { readHighColor4BitsAndGetAsTrueColor } from './utils';
 
 export default class TGAImage {
   private static GRID_SIZE = 30;
@@ -61,9 +62,14 @@ export default class TGAImage {
 
   private drawUncompressed(imageData: ImageData) {
     console.time('uncompressed loop');
-    const { imageHeight, imageWidth, pixelSize, topToBottom } = this.stats;
+    const { imageHeight, imageWidth, pixelSize, topToBottom, attributesType } = this.stats;
     const { data } = imageData;
     const { imageDataBytes } = this;
+    let hasAlpha = true;
+
+    if (attributesType && (attributesType !== AttributesType.USEFUL_ALPHA_CHANNEL && attributesType !== AttributesType.PREMULTIPLIED_ALPHA)) {
+      hasAlpha = false;
+    }
 
     for (let y = 0; y < imageHeight; ++y) {
       for (let x = 0; x < imageWidth; ++x) {
@@ -84,10 +90,14 @@ export default class TGAImage {
 
           case 4: {
             const byteOffset = y * imageWidth * 4 + x * 4;
-            data[canvasOffset] = imageDataBytes[byteOffset + 3];
-            data[canvasOffset + 1] = imageDataBytes[byteOffset + 2];
-            data[canvasOffset + 2] = imageDataBytes[byteOffset + 1];
-            data[canvasOffset + 3] = imageDataBytes[byteOffset];
+            data[canvasOffset] = imageDataBytes[byteOffset + 2];
+            data[canvasOffset + 1] = imageDataBytes[byteOffset + 1];
+            data[canvasOffset + 2] = imageDataBytes[byteOffset];
+
+            if (hasAlpha) {
+              data[canvasOffset + 3] = imageDataBytes[byteOffset + 3];
+            }
+
             break;
           }
         }
@@ -99,10 +109,11 @@ export default class TGAImage {
 
   private drawRunLengthEncoded(imageData: ImageData) {
     console.time('run length encoded loop');
-    const { imageHeight, imageWidth, pixelSize, topToBottom } = this.stats;
+    const { imageHeight, imageWidth, pixelSize, topToBottom, attributesType, imageType } = this.stats;
     const { data } = imageData;
     const { imageDataBytes, dataView } = this;
     const readArrayLength = imageDataBytes.length;
+    let hasAlpha = true;
     let readCursor = 0;
     let x = 0;
     let y = 0;
@@ -110,6 +121,10 @@ export default class TGAImage {
     let byte2;
     let byte3;
     let byte4;
+
+    if (attributesType && (attributesType !== AttributesType.USEFUL_ALPHA_CHANNEL && attributesType !== AttributesType.PREMULTIPLIED_ALPHA)) {
+      hasAlpha = false;
+    }
 
     for (let i = 0; i < readArrayLength; ++i) {
       const packet = imageDataBytes[readCursor++];
@@ -154,7 +169,11 @@ export default class TGAImage {
               data[canvasOffset] = byte3;
               data[canvasOffset + 1] = byte2;
               data[canvasOffset + 2] = byte1;
-              data[canvasOffset + 3] = byte4;
+              
+              if (hasAlpha) {
+                data[canvasOffset + 3] = byte4;
+              }
+
               break;
             }
           }
@@ -198,7 +217,11 @@ export default class TGAImage {
               data[canvasOffset] = imageDataBytes[readCursor + 2];
               data[canvasOffset + 1] = imageDataBytes[readCursor + 1];
               data[canvasOffset + 2] = imageDataBytes[readCursor];
-              data[canvasOffset + 3] = imageDataBytes[readCursor + 3];
+
+              if (hasAlpha) {
+                data[canvasOffset + 3] = imageDataBytes[readCursor + 3];
+              }
+
               readCursor += 4;
               break;
             }
@@ -447,7 +470,7 @@ export default class TGAImage {
       }
     }
 
-    if (this.stats.pixelSize === 4) {
+    if (this.stats.pixelSize === 4 || this.stats.colorMapPixelSize === 4) {
       const { GRID_SIZE } = TGAImage;
       const { imageWidth, imageHeight } = this.stats;
       let evenRow = 0;
