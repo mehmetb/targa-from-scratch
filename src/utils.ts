@@ -22,8 +22,25 @@ function capitalize(str: string): string {
   });
 }
 
+function getAttributesType(tga: TGAImage) {
+  switch (tga.stats.attributesType) {
+    case AttributesType.NO_ALPHA_DATA:
+      return 'No alpha';
+    case AttributesType.UNDEFINED_IGNORED:
+      return 'Undefined; ignored';
+    case AttributesType.UNDEFINED_RETAINED:
+      return 'Undefined; retained';
+    case AttributesType.USEFUL_ALPHA_CHANNEL:
+      return 'Useful alpha channel';
+    case AttributesType.PREMULTIPLIED_ALPHA:
+      return 'Premultiplied alpha';
+    default:
+      return undefined;
+  }
+}
+
 export function generateImageInformationTable(tga: TGAImage) {
-  const stats = {
+  const stats: any = {
     version: tga.stats.version,
     imageType: capitalize(ImageType[tga.stats.imageType].toLowerCase().replace(/_/g, ' ')),
     xOrigin: tga.stats.xOrigin,
@@ -39,6 +56,12 @@ export function generateImageInformationTable(tga: TGAImage) {
     colorMapPixelSize: tga.stats.colorMapPixelSize,
     processingTook: `${tga.stats.duration} ms`,
   };
+
+  const attributesType = getAttributesType(tga);
+
+  if (attributesType) {
+    stats.attributesType = attributesType;
+  }
 
   const rows: { [key: string]: string } = {};
 
