@@ -111,7 +111,7 @@ export default class TGAImage {
     console.time('run length encoded loop');
     const { imageHeight, imageWidth, pixelSize, topToBottom, attributesType, imageType } = this.stats;
     const { data } = imageData;
-    const { imageDataBytes, dataView } = this;
+    const { imageDataBytes } = this;
     const readArrayLength = imageDataBytes.length;
     const ab = new ArrayBuffer(2);
     const ua = new Uint8Array(ab);
@@ -125,7 +125,11 @@ export default class TGAImage {
     let byte3;
     let byte4;
 
-    if (attributesType && (attributesType !== AttributesType.USEFUL_ALPHA_CHANNEL && attributesType !== AttributesType.PREMULTIPLIED_ALPHA)) {
+    if (
+      attributesType &&
+      attributesType !== AttributesType.USEFUL_ALPHA_CHANNEL &&
+      attributesType !== AttributesType.PREMULTIPLIED_ALPHA
+    ) {
       hasAlpha = false;
     }
 
@@ -176,14 +180,8 @@ export default class TGAImage {
             }
 
             case 2: {
-              ua[0] = byte1;
-              ua[1] = byte2;
-              const byteValue = dv.getUint16(0, true);
-
               if (imageType === ImageType.RUN_LENGTH_ENCODED_GRAY_SCALE) {
-                data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
-                data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
-                data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+                data[canvasOffset + 3] = byte2;
               } else {
                 ua[0] = byte1;
                 ua[1] = byte2;
@@ -206,7 +204,7 @@ export default class TGAImage {
               data[canvasOffset] = byte3;
               data[canvasOffset + 1] = byte2;
               data[canvasOffset + 2] = byte1;
-              
+
               if (hasAlpha) {
                 data[canvasOffset + 3] = byte4;
               }
@@ -243,14 +241,9 @@ export default class TGAImage {
             }
 
             case 2: {
-              ua[0] = imageDataBytes[readCursor++];
-              ua[1] = imageDataBytes[readCursor++];
-              const byteValue = dv.getUint16(0, true);
-
               if (imageType === ImageType.RUN_LENGTH_ENCODED_GRAY_SCALE) {
-                data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
-                data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
-                data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
+                readCursor += 1;
+                data[canvasOffset + 3] = imageDataBytes[readCursor++];
               } else {
                 ua[0] = imageDataBytes[readCursor++];
                 ua[1] = imageDataBytes[readCursor++];
@@ -293,12 +286,6 @@ export default class TGAImage {
         }
       }
     }
-            console.log({
-              red: data[0],
-              green: data[1],
-              blue: data[2],
-              alpha: data[3],
-            });
     console.timeEnd('run length encoded loop');
   }
 
