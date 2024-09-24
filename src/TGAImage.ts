@@ -1,6 +1,6 @@
 import { ImageType, AttributesType } from './types';
 import { ImageStats } from './ImageStats';
-import { readHighColor4BitsAndGetAsTrueColor } from './utils';
+import { readHighColor5BitsAndGetAsTrueColor } from './utils';
 
 export default class TGAImage {
   private static GRID_SIZE = 30;
@@ -185,9 +185,12 @@ export default class TGAImage {
                 data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
                 data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
               } else {
-                data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
-                data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 9);
-                data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 4);
+                ua[0] = byte1;
+                ua[1] = byte2;
+                const byteValue = dv.getUint16(0, true);
+                data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
+                data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
+                data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
               }
               break;
             }
@@ -249,9 +252,12 @@ export default class TGAImage {
                 data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
                 data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
               } else {
-                data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
-                data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 9);
-                data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 4);
+                ua[0] = imageDataBytes[readCursor++];
+                ua[1] = imageDataBytes[readCursor++];
+                const byteValue = dv.getUint16(0, true);
+                data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
+                data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
+                data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
               }
               break;
             }
@@ -337,10 +343,10 @@ export default class TGAImage {
           }
 
           case 2: {
-            const byteValue = dataView.getUint16(colorMapEntryOffset, true)
-            data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
-            data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 9);
-            data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 4);
+            const byteValue = dataView.getUint16(colorMapEntryOffset, true);
+            data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
+            data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
+            data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
             break;
           }
 
@@ -421,10 +427,10 @@ export default class TGAImage {
             }
 
             case 2: {
-              const byteValue = dataView.getUint16(colorMapEntryOffset, true)
-              data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
-              data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 9);
-              data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 4);
+              const byteValue = dataView.getUint16(colorMapEntryOffset, true);
+              data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
+              data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
+              data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
               break;
             }
 
@@ -478,10 +484,10 @@ export default class TGAImage {
             }
 
             case 2: {
-              const byteValue = dataView.getUint16(colorMapEntryOffset, true)
-              data[canvasOffset] = readHighColor4BitsAndGetAsTrueColor(byteValue, 14);
-              data[canvasOffset + 1] = readHighColor4BitsAndGetAsTrueColor(byteValue, 9);
-              data[canvasOffset + 2] = readHighColor4BitsAndGetAsTrueColor(byteValue, 4);
+              const byteValue = dataView.getUint16(colorMapEntryOffset, true);
+              data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
+              data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
+              data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
               break;
             }
 

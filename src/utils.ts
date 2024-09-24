@@ -86,7 +86,7 @@ function readBit(byteValue: number, bitIndex: number): number {
   return (byteValue >> bitIndex) & 1;
 }
 
-export function readHighColor4BitsAndGetAsTrueColor(
+export function readHighColor5BitsAndGetAsTrueColor(
   byteValue: number,
   startBitOffset: number,
 ): number {
