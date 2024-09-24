@@ -84,12 +84,19 @@ export default class TGAImage {
 
   private drawUncompressed(imageData: ImageData) {
     console.time('uncompressed loop');
-    const { imageHeight, imageWidth, pixelSize, topToBottom, attributesType } = this.stats;
+    const { imageHeight, imageWidth, pixelSize, topToBottom, attributesType, imageType } = this.stats;
     const { data } = imageData;
     const { imageDataBytes } = this;
+    const ab = new ArrayBuffer(2);
+    const ua = new Uint8Array(ab);
+    const dv = new DataView(ab);
     let hasAlpha = true;
 
-    if (attributesType && (attributesType !== AttributesType.USEFUL_ALPHA_CHANNEL && attributesType !== AttributesType.PREMULTIPLIED_ALPHA)) {
+    if (
+      attributesType &&
+      attributesType !== AttributesType.USEFUL_ALPHA_CHANNEL &&
+      attributesType !== AttributesType.PREMULTIPLIED_ALPHA
+    ) {
       hasAlpha = false;
     }
 
@@ -102,6 +109,24 @@ export default class TGAImage {
         data[canvasOffset + 3] = 255;
 
         switch (pixelSize) {
+          case 2: {
+            const byteOffset = y * imageWidth * 2 + x * 2;
+
+            if (imageType === ImageType.GRAY_SCALE) {
+              data[canvasOffset + 3] = imageDataBytes[byteOffset + 1];
+            } else {
+              ua[0] = imageDataBytes[byteOffset];
+              ua[1] = imageDataBytes[byteOffset + 1];
+
+              const byteValue = dv.getUint16(0, true);
+              data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
+              data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
+              data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
+            }
+
+            break;
+          }
+
           case 3: {
             const byteOffset = y * imageWidth * 3 + x * 3;
             data[canvasOffset] = imageDataBytes[byteOffset + 2];
