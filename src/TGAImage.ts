@@ -38,26 +38,48 @@ export default class TGAImage {
   }
 
   private drawUncompressedGrayscale(imageData: ImageData) {
-    console.time('uncompressed loop');
-    const { imageHeight, imageWidth, topToBottom } = this.stats;
+    console.time('uncompressed grayscale loop');
+    const { imageHeight, imageWidth, topToBottom, pixelSize } = this.stats;
     const { data } = imageData;
     const { imageDataBytes } = this;
     data.fill(255);
 
     for (let y = 0; y < imageHeight; ++y) {
       for (let x = 0; x < imageWidth; ++x) {
-        const canvasOffset = topToBottom
-          ? y * imageWidth * 4 + x * 4
-          : (imageHeight - y - 1) * imageWidth * 4 + x * 4;
+        switch (pixelSize) {
+          case 1: {
+            const canvasOffset = topToBottom
+              ? y * imageWidth * 4 + x * 4
+              : (imageHeight - y - 1) * imageWidth * 4 + x * 4;
 
-        const byteOffset = x + y * imageWidth;
-        data[canvasOffset] = imageDataBytes[byteOffset];
-        data[canvasOffset + 1] = imageDataBytes[byteOffset];
-        data[canvasOffset + 2] = imageDataBytes[byteOffset];
+            const byteOffset = x + y * imageWidth;
+            data[canvasOffset] = imageDataBytes[byteOffset];
+            data[canvasOffset + 1] = imageDataBytes[byteOffset];
+            data[canvasOffset + 2] = imageDataBytes[byteOffset];
+            break;
+          }
+
+          case 4: {
+            const canvasOffset = topToBottom
+              ? y * imageWidth * 4 + x * 4
+              : (imageHeight - y - 1) * imageWidth * 4 + x * 4;
+
+            const byteOffset = x + y * imageWidth;
+            data[canvasOffset] = imageDataBytes[byteOffset];
+            data[canvasOffset + 1] = imageDataBytes[byteOffset];
+            data[canvasOffset + 2] = imageDataBytes[byteOffset];
+            break;
+          }
+
+          default: {
+            alert('Unsupported pixel size');
+            return;
+          }
+        }
       }
     }
 
-    console.timeEnd('uncompressed loop');
+    console.timeEnd('uncompressed grayscale loop');
   }
 
   private drawUncompressed(imageData: ImageData) {
