@@ -590,7 +590,17 @@ export default class TGAImage {
       }
     }
 
-    if (this.stats.pixelSize === 4 || this.stats.colorMapPixelSize === 4) {
+    const hasTransparency = this.stats.pixelSize === 4
+      || this.stats.colorMapPixelSize === 4
+      || (
+        this.stats.pixelSize === 2
+        && (
+          this.stats.imageType === ImageType.GRAY_SCALE
+          || this.stats.imageType === ImageType.RUN_LENGTH_ENCODED_GRAY_SCALE
+        )
+    );
+
+    if (hasTransparency) {
       const { GRID_SIZE } = TGAImage;
       const { imageWidth, imageHeight } = this.stats;
       let evenRow = 0;
