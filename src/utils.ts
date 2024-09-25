@@ -1,5 +1,5 @@
-import { ImageType, AttributesType } from './types';
-import TGAImage from './TGAImage';
+import { ImageType, AttributesType } from './lib/types';
+import ImageFileInfo from './lib/ImageFileInfo';
 
 export function readFile(file: File): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -22,8 +22,8 @@ function capitalize(str: string): string {
   });
 }
 
-function getAttributesType(tga: TGAImage) {
-  switch (tga.stats.attributesType) {
+function getAttributesType(fileInfo: ImageFileInfo) {
+  switch (fileInfo.attributesType) {
     case AttributesType.NO_ALPHA_DATA:
       return 'No alpha';
     case AttributesType.UNDEFINED_IGNORED:
@@ -39,33 +39,47 @@ function getAttributesType(tga: TGAImage) {
   }
 }
 
-export function generateImageInformationTable(tga: TGAImage) {
+export function generateImageInformationTable(fileInfo: ImageFileInfo, duration: number) {
+  const attributesType = getAttributesType(fileInfo);
   const stats: any = {
-    version: tga.stats.version,
-    imageType: capitalize(ImageType[tga.stats.imageType].toLowerCase().replace(/_/g, ' ')),
-    xOrigin: tga.stats.xOrigin,
-    yOrigin: tga.stats.yOrigin,
-    imageWidth: tga.stats.imageWidth,
-    imageHeight: tga.stats.imageHeight,
-    pixelSize: tga.stats.pixelSize,
-    imageDescriptor: tga.stats.imageDescriptor.toString(2).padStart(8, '0'),
-    imageIdentificationFieldLength: tga.stats.imageIdentificationFieldLength,
-    topToBottom: tga.stats.isTopToBottom(),
-    colorMapOrigin: tga.stats.colorMapOrigin,
-    colorMapLength: tga.stats.colorMapLength,
-    colorMapPixelSize: tga.stats.colorMapPixelSize,
-    processingTook: `${tga.stats.duration} ms`,
+    version: fileInfo.version,
+    imageType: capitalize(ImageType[fileInfo.imageType].toLowerCase().replace(/_/g, ' ')),
+    xOrigin: fileInfo.xOrigin,
+    yOrigin: fileInfo.yOrigin,
+    imageWidth: fileInfo.imageWidth,
+    imageHeight: fileInfo.imageHeight,
+    pixelSize: fileInfo.pixelSize,
+    imageDescriptor: fileInfo.imageDescriptor.toString(2).padStart(8, '0'),
+    attributesType,
+    imageIdentificationFieldLength: fileInfo.imageIdentificationFieldLength,
+    topToBottom: fileInfo.isTopToBottom(),
+    colorMapOrigin: fileInfo.colorMapOrigin,
+    colorMapLength: fileInfo.colorMapLength,
+    colorMapPixelSize: fileInfo.colorMapPixelSize,
+    extensionOffset: fileInfo.extensionOffset,
+    authorName: fileInfo.authorName,
+    authorComments: fileInfo.authorComments,
+    dateTimeStamp: fileInfo.dateTimeStamp?.toString(),
+    jobId: fileInfo.jobId,
+    jobTime: fileInfo.jobTime,
+    softwareId: fileInfo.softwareId,
+    softwareVersion: fileInfo.softwareVersion,
+    keyColor: fileInfo.keyColor,
+    aspectRatio: fileInfo.aspectRatio,
+    gammaValue: fileInfo.gammaValue,
+    colorCorrectionOffset: fileInfo.colorCorrectionOffset,
+    postageStampOffset: fileInfo.postageStampOffset,
+    scanLineOffset: fileInfo.scanLineOffset,
+    processingTook: `${duration} ms`,
   };
-
-  const attributesType = getAttributesType(tga);
-
-  if (attributesType) {
-    stats.attributesType = attributesType;
-  }
 
   const rows: { [key: string]: string } = {};
 
   for (const [key, value] of Object.entries(stats)) {
+    if (value === undefined) {
+      continue;
+    }
+
     const firsCharacter = key[0];
     const field = `${firsCharacter.toUpperCase()}${key
       .replace(/(?!\b[A-Z])([A-Z])/g, ' $1')
@@ -73,6 +87,12 @@ export function generateImageInformationTable(tga: TGAImage) {
 
     if (typeof value === 'boolean') {
       rows[field] = value ? 'Yes' : 'No';
+      continue;
+    }
+
+    if (key === 'keyColor' && fileInfo.keyColor) {
+      const { red, green, blue, alpha } = fileInfo.keyColor;
+      rows[field] = `rgba(${red}, ${green}, ${blue}, ${alpha})`;
       continue;
     }
 

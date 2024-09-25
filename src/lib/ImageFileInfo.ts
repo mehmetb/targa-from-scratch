@@ -1,11 +1,12 @@
 import { ImageType, ImageDescriptorFields, AttributesType } from './types';
 
-export class ImageStats {
+export default class ImageFileInfo {
   #arrayBuffer: ArrayBuffer;
   private dataView: DataView;
   private bytes: Uint8Array;
 
   rleEncoded: boolean = false;
+  hasTransparency: boolean = false;
 
   colorMapType: number;
   imageType: ImageType;
@@ -24,7 +25,6 @@ export class ImageStats {
   extensionOffset: number = 0;
   version: 1 | 2;
   topToBottom: boolean;
-  duration: number = 0;
 
   authorName: string|undefined;
   authorComments: string|undefined;
@@ -36,10 +36,11 @@ export class ImageStats {
   keyColor: { red: number, green: number, blue: number, alpha: number }|undefined;
   aspectRatio: string|undefined;
   gammaValue: string|undefined;
-  colorCorrectionOffset: number = 0;
-  postageStampOffset: number = 0;
+  colorCorrectionOffset: number;
+  postageStampOffset: number;
   scanLineOffset: number;
   attributesType: AttributesType|undefined;
+
 
   get arrayBuffer() {
     return this.#arrayBuffer;
@@ -86,6 +87,16 @@ export class ImageStats {
     ) {
       this.rleEncoded = true;
     }
+
+    this.hasTransparency = this.pixelSize === 4
+      || this.colorMapPixelSize === 4
+      || (
+        this.pixelSize === 2
+        && (
+          this.imageType === ImageType.GRAY_SCALE
+          || this.imageType === ImageType.RUN_LENGTH_ENCODED_GRAY_SCALE
+        )
+      );
   }
 
   private getImageDataFieldOffset(): number {
@@ -160,8 +171,16 @@ export class ImageStats {
     this.authorName = readString(EO + 1, EO + 42);
     this.authorComments = readString(EO + 42, EO + 366);
     this.jobId = readString(EO + 379, EO + 419);
+
     this.softwareId = readString(EO + 426, EO + 466);
-    this.softwareVersion = readString(EO + 467, EO + 469);
+
+    const softwareVersion = this.dataView.getUint16(EO + 467, true);
+    const softwareVersionLetter = String.fromCharCode(this.dataView.getUint8(EO + 469));
+    const softwareVersionUnused = softwareVersion === 0 && softwareVersionLetter === ' ';
+
+    if (!softwareVersionUnused) {
+      this.softwareVersion = `${(softwareVersion / 100).toFixed(2)}${softwareVersionLetter}`;
+    }
 
     const [month, day, year, hour, minute, second] = readShorts(EO + 367, 6);
 

@@ -18,7 +18,7 @@
   "homepage": "https://github.com/mehmetb/targa-from-scratch#readme",
   "scripts": {
     "build": "esbuild src/index.ts --outdir=www/js --format=esm --bundle --target=ESNext",
-    "start": "esbuild src/index.ts --outdir=www/js --format=esm --watch --bundle --target=ESNext --servedir=www"
+    "start": "esbuild src/www-index.ts --outdir=www/js --format=esm --watch --bundle --target=ESNext --servedir=www"
   },
   "devDependencies": {
     "esbuild": "^0.19.5"

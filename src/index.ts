@@ -1,56 +1,108 @@
-import { readFile, generateImageInformationTable } from './utils';
-import TGAImage from './TGAImage';
+import { ImageType } from './lib/types';
+import TGAFile from './lib/TGAFile';
+import ImageFileInfo from './lib/ImageFileInfo';
+import drawColorMapped from './lib/draw-methods/drawColorMapped';
+import drawRunLengthEncoded from './lib/draw-methods/drawRunLengthEncoded';
+import drawRunLengthEncodedColorMapped from './lib/draw-methods/drawRunLengthEncodedColorMapped';
+import drawUncompressed from './lib/draw-methods/drawUncompressed';
+import drawUncompressedGrayscale from './lib/draw-methods/drawUncompressedGrayscale';
 
-// Esbuild Live Reload
-new EventSource('/esbuild').addEventListener('change', () => location.reload());
+function drawTransparencyGrid(params: { context: CanvasRenderingContext2D, imageWidth: number, imageHeight: number, gridSize: number }) {
+  const { context, imageWidth, imageHeight, gridSize } = params;
+  let evenRow = 0;
 
-const fileInput = document.querySelector('input[type=file]') as HTMLInputElement;
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const table = document.querySelector('table') as HTMLTableElement;
-const template = document.querySelector('#row') as HTMLTemplateElement;
+  for (let y = 0; y < imageHeight; y += gridSize) {
+    let evenColumn = 0;
 
-function populateStatsTable(tga: TGAImage) {
-  table.innerHTML = '';
-
-  const rows = generateImageInformationTable(tga);
-
-  for (const [key, value] of Object.entries(rows)) {
-    const clone = template.content.cloneNode(true) as HTMLElement;
-    const tds = clone.querySelectorAll('td');
-
-    tds[0].innerText = key;
-    tds[1].innerText = value;
-    table.appendChild(clone);
-  }
-
-  console.table(rows);
-}
-
-async function drawToCanvas() {
-  try {
-    const { files } = fileInput;
-
-    if (!files?.length) {
-      return;
+    for (let x = 0; x < imageWidth; x += gridSize) {
+      context.fillStyle = evenRow ^ evenColumn ? 'rgba(180, 180, 180, 1)' : 'rgba(100, 100, 100, 1)';
+      context.fillRect(x, y, gridSize, gridSize);
+      evenColumn = evenColumn === 1 ? 0 : 1;
     }
 
-    const file = files.item(0);
-
-    if (!file) return;
-
-    const arrayBuffer = await readFile(file);
-    const tga = new TGAImage(arrayBuffer);
-
-    tga.draw(canvas)
-      .then(() => {
-        populateStatsTable(tga);
-      })
-      .catch(console.trace);
-  } catch (ex) {
-    alert(ex.message);
+    evenRow = evenRow === 1 ? 0 : 1;
   }
 }
 
-fileInput.addEventListener('change', () => {
-  drawToCanvas();
-});
+function resetCanvas(context: CanvasRenderingContext2D, imageWidth: number, imageHeight: number) {
+  context.resetTransform();
+  context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+  context.canvas.width = imageWidth;
+  context.canvas.height = imageHeight;
+  context.fillStyle = 'rgba(40, 40, 40, 255)';
+  context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+}
+
+function decodeTGA(tgaFile: TGAFile, context: CanvasRenderingContext2D): ImageData {
+  const imageData = context.createImageData(tgaFile.fileInfo.imageWidth, tgaFile.fileInfo.imageHeight);
+  imageData.data.fill(255);
+
+  if (tgaFile.fileInfo.rleEncoded) {
+    if (tgaFile.fileInfo.imageType === ImageType.RUN_LENGTH_ENCODED_COLOR_MAPPED) {
+      drawRunLengthEncodedColorMapped(imageData, tgaFile);
+    } else {
+      drawRunLengthEncoded(imageData, tgaFile);
+    }
+  } else {
+    if (tgaFile.fileInfo.imageType === ImageType.COLOR_MAPPED) {
+      drawColorMapped(imageData, tgaFile);
+    } else {
+      if (tgaFile.fileInfo.pixelSize === 1) {
+        drawUncompressedGrayscale(imageData, tgaFile);
+      } else {
+        drawUncompressed(imageData, tgaFile);
+      }
+    }
+  }
+
+  return imageData;
+}
+
+function flipCanvasVertically(context: CanvasRenderingContext2D) {
+  context.translate(0, context.canvas.height);
+  context.scale(1, -1);
+}
+
+export function drawToCanvas(canvas: HTMLCanvasElement, arrayBuffer: ArrayBuffer): Promise<{ duration: number, fileInfo: ImageFileInfo }> {
+  const context = canvas.getContext('2d');
+
+  if (!context) {
+    alert('Failed to get canvas context');
+    return Promise.reject(new Error('Failed to get canvas context'));
+  }
+
+  const start = performance.now();
+
+  // read the TGA file, get image width, height and other metadata
+  const tgaFile = new TGAFile(arrayBuffer);
+
+  // reset the canvas and set it to correct size
+  resetCanvas(context, tgaFile.fileInfo.imageWidth, tgaFile.fileInfo.imageHeight);
+
+  // decode the TGA and get an ImageData object to draw to the canvas
+  const imageData = decodeTGA(tgaFile, context);
+
+  // if the image has transparency, draw a grid to show it
+  if (tgaFile.fileInfo.hasTransparency) {
+    const gridSize = Math.floor(Math.min(tgaFile.fileInfo.imageWidth / 5, 30));
+    drawTransparencyGrid({
+      context,
+      gridSize,
+      imageWidth: tgaFile.fileInfo.imageWidth,
+      imageHeight: tgaFile.fileInfo.imageHeight,
+    });
+  }
+
+  return createImageBitmap(imageData, { premultiplyAlpha: tgaFile.fileInfo.hasTransparency ? 'premultiply' : 'none' })
+    .then((bitmap) => {
+      if (!tgaFile.fileInfo.topToBottom) {
+        flipCanvasVertically(context);
+      }
+
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close();
+
+      const end = performance.now();
+      return { duration: end - start, fileInfo: tgaFile.fileInfo };
+    });
+}
