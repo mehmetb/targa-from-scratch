@@ -81,21 +81,3 @@ export function generateImageInformationTable(tga: TGAImage) {
 
   return rows;
 }
-
-function readBit(byteValue: number, bitIndex: number): number {
-  return (byteValue >> bitIndex) & 1;
-}
-
-export function readHighColor5BitsAndGetAsTrueColor(
-  byteValue: number,
-  startBitOffset: number,
-): number {
-  const value =
-    readBit(byteValue, startBitOffset) * 16 +
-    readBit(byteValue, startBitOffset - 1) * 8 +
-    readBit(byteValue, startBitOffset - 2) * 4 +
-    readBit(byteValue, startBitOffset - 3) * 2 +
-    readBit(byteValue, startBitOffset - 4);
-
-  return Math.round(255 * (value / 31));
-}

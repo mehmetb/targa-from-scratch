@@ -1,6 +1,5 @@
 import { ImageType, AttributesType } from './types';
 import { ImageStats } from './ImageStats';
-import { readHighColor5BitsAndGetAsTrueColor } from './utils';
 
 export default class TGAImage {
   private static GRID_SIZE = 30;
@@ -119,9 +118,10 @@ export default class TGAImage {
               ua[1] = imageDataBytes[byteOffset + 1];
 
               const byteValue = dv.getUint16(0, true);
-              data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
-              data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
-              data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
+              // convert 5 bits to 8 bits
+              data[canvasOffset] = Math.round(((byteValue & 0x7C00) >> 10) / 31 * 255);
+              data[canvasOffset + 1] = Math.round(((byteValue & 0x03E0) >> 5) / 31 * 255);
+              data[canvasOffset + 2] = Math.round((byteValue & 0x001F) / 31 * 255);
             }
 
             break;
@@ -233,9 +233,10 @@ export default class TGAImage {
                 ua[0] = byte1;
                 ua[1] = byte2;
                 const byteValue = dv.getUint16(0, true);
-                data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
-                data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
-                data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
+                // convert 5 bits to 8 bits
+                data[canvasOffset] = Math.round(((byteValue & 0x7C00) >> 10) / 31 * 255);
+                data[canvasOffset + 1] = Math.round(((byteValue & 0x03E0) >> 5) / 31 * 255);
+                data[canvasOffset + 2] = Math.round((byteValue & 0x001F) / 31 * 255);
               }
               break;
             }
@@ -295,9 +296,10 @@ export default class TGAImage {
                 ua[0] = imageDataBytes[readCursor++];
                 ua[1] = imageDataBytes[readCursor++];
                 const byteValue = dv.getUint16(0, true);
-                data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
-                data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
-                data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
+                // convert 5 bits to 8 bits
+                data[canvasOffset] = Math.round(((byteValue & 0x7C00) >> 10) / 31 * 255);
+                data[canvasOffset + 1] = Math.round(((byteValue & 0x03E0) >> 5) / 31 * 255);
+                data[canvasOffset + 2] = Math.round((byteValue & 0x001F) / 31 * 255);
               }
               break;
             }
@@ -378,9 +380,10 @@ export default class TGAImage {
 
           case 2: {
             const byteValue = dataView.getUint16(colorMapEntryOffset, true);
-            data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
-            data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
-            data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
+            // convert 5 bits to 8 bits
+            data[canvasOffset] = Math.round(((byteValue & 0x7C00) >> 10) / 31 * 255);
+            data[canvasOffset + 1] = Math.round(((byteValue & 0x03E0) >> 5) / 31 * 255);
+            data[canvasOffset + 2] = Math.round((byteValue & 0x001F) / 31 * 255);
             break;
           }
 
@@ -462,9 +465,10 @@ export default class TGAImage {
 
             case 2: {
               const byteValue = dataView.getUint16(colorMapEntryOffset, true);
-              data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
-              data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
-              data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
+              // convert 5 bits to 8 bits
+              data[canvasOffset] = Math.round(((byteValue & 0x7C00) >> 10) / 31 * 255);
+              data[canvasOffset + 1] = Math.round(((byteValue & 0x03E0) >> 5) / 31 * 255);
+              data[canvasOffset + 2] = Math.round((byteValue & 0x001F) / 31 * 255);
               break;
             }
 
@@ -519,9 +523,10 @@ export default class TGAImage {
 
             case 2: {
               const byteValue = dataView.getUint16(colorMapEntryOffset, true);
-              data[canvasOffset] = readHighColor5BitsAndGetAsTrueColor(byteValue, 14);
-              data[canvasOffset + 1] = readHighColor5BitsAndGetAsTrueColor(byteValue, 9);
-              data[canvasOffset + 2] = readHighColor5BitsAndGetAsTrueColor(byteValue, 4);
+              // convert 5 bits to 8 bits
+              data[canvasOffset] = Math.round(((byteValue & 0x7C00) >> 10) / 31 * 255);
+              data[canvasOffset + 1] = Math.round(((byteValue & 0x03E0) >> 5) / 31 * 255);
+              data[canvasOffset + 2] = Math.round((byteValue & 0x001F) / 31 * 255);
               break;
             }
 
@@ -563,6 +568,7 @@ export default class TGAImage {
       return;
     }
 
+    const begin = performance.now();
     context.clearRect(0, 0, canvas.width, canvas.height);
     canvas.width = this.stats.imageWidth;
     canvas.height = this.stats.imageHeight;
@@ -570,7 +576,6 @@ export default class TGAImage {
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     const imageData = context.createImageData(this.stats.imageWidth, this.stats.imageHeight);
-    const begin = performance.now();
 
     if (this.stats.rleEncoded) {
       if (this.stats.imageType === ImageType.RUN_LENGTH_ENCODED_COLOR_MAPPED) {
