@@ -6,7 +6,7 @@
   "author": {
     "name": "Mehmet Baker",
     "email": "mehmet@mehmetbaker.dev",
-    "url": "https://mehmetb.github.io"
+    "url": "https://github.com/mehmetb"
   },
   "repository": {
     "type": "git",
@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/mehmetb/tga-for-web#readme",
   "scripts": {
-    "build": "esbuild src/index.ts --outdir=www/js --format=esm --bundle --target=ESNext",
+    "build-live-demo": "esbuild src/index.ts --outdir=www/js --format=esm --bundle --target=ESNext",
     "start": "esbuild src/www-index.ts --outdir=www/js --format=esm --watch --bundle --target=ESNext --servedir=www"
   },
   "devDependencies": {
