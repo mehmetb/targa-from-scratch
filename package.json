@@ -16,6 +16,10 @@
     "url": "https://github.com/mehmetb/tga-for-web/issues"
   },
   "homepage": "https://github.com/mehmetb/tga-for-web#readme",
+  "files": [
+    "dist",
+    "COPYING"
+  ],
   "scripts": {
     "build-for-npm": "tsc",
     "build-live-demo": "esbuild src/index.ts --outdir=www/js --format=esm --bundle --target=ESNext",
