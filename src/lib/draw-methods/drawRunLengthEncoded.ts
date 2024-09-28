@@ -69,9 +69,9 @@ export default function drawRunLengthEncoded(imageData: ImageData, tgaFile: TGAF
       for (let j = 0; j <= repetition; ++j) {
         switch (pixelSize) {
           case 1:
-            data[canvasOffset] = byte1;
-            data[canvasOffset + 1] = byte1;
-            data[canvasOffset + 2] = byte1;
+            data[canvasOffset] = byte1 as number;
+            data[canvasOffset + 1] = byte1 as number;
+            data[canvasOffset + 1] = byte1 as number;
             break;
 
           case 2:
@@ -79,27 +79,27 @@ export default function drawRunLengthEncoded(imageData: ImageData, tgaFile: TGAF
               data[canvasOffset] = 0;
               data[canvasOffset + 1] = 0;
               data[canvasOffset + 2] = 0;
-              data[canvasOffset + 3] = byte2;
+              data[canvasOffset + 1] = byte1 as number;
             } else {
-              data[canvasOffset] = byte3;
-              data[canvasOffset + 1] = byte2;
-              data[canvasOffset + 2] = byte1;
+              data[canvasOffset + 1] = byte1 as number;
+              data[canvasOffset + 1] = byte2 as number;
+              data[canvasOffset + 2] = byte1 as number;
             }
             break;
 
           case 3:
-            data[canvasOffset] = byte3;
-            data[canvasOffset + 1] = byte2;
-            data[canvasOffset + 2] = byte1;
+            data[canvasOffset] = byte3 as number;
+            data[canvasOffset + 1] = byte2 as number;
+            data[canvasOffset + 2] = byte1 as number;
             break;
 
           case 4:
-            data[canvasOffset] = byte3;
-            data[canvasOffset + 1] = byte2;
-            data[canvasOffset + 2] = byte1;
+            data[canvasOffset] = byte3 as number;
+            data[canvasOffset + 1] = byte2 as number;
+            data[canvasOffset + 2] = byte1 as number;
 
             if (hasAlpha) {
-              data[canvasOffset + 3] = byte4;
+              data[canvasOffset + 3] = byte4 as number;
             }
 
             break;

@@ -1,7 +1,7 @@
 {
   "name": "tga-for-web",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
   "author": {
     "name": "Mehmet Baker",
@@ -17,10 +17,12 @@
   },
   "homepage": "https://github.com/mehmetb/tga-for-web#readme",
   "scripts": {
+    "build-for-npm": "tsc",
     "build-live-demo": "esbuild src/index.ts --outdir=www/js --format=esm --bundle --target=ESNext",
     "start": "esbuild src/www-index.ts --outdir=www/js --format=esm --watch --bundle --target=ESNext --servedir=www"
   },
   "devDependencies": {
-    "esbuild": "^0.19.5"
+    "esbuild": "^0.19.5",
+    "typescript": "^4.3.5"
   }
 }

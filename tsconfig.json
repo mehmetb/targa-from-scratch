@@ -1,0 +1,15 @@
+{
+  "include": [
+    "src/index.ts",
+    "src/utils.ts",
+    "src/lib/**/*.ts",
+  ],
+  "compilerOptions": {
+    "outDir": "./dist",
+    "module": "ESNext",
+    "target": "ESNext",
+    "sourceMap": false,
+    "declaration": true,
+    "strict": true
+  }
+}

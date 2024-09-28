@@ -1,9 +1,9 @@
 import { ImageType, ImageDescriptorFields, AttributesType } from './types';
 
 export default class ImageFileInfo {
-  #arrayBuffer: ArrayBuffer;
-  private dataView: DataView;
-  private bytes: Uint8Array;
+  #arrayBuffer: ArrayBuffer = new ArrayBuffer(0);
+  #dataView: DataView = new DataView(this.#arrayBuffer);
+  #bytes: Uint8Array = new Uint8Array(this.#arrayBuffer);
 
   rleEncoded: boolean = false;
   hasTransparency: boolean = false;
@@ -23,7 +23,7 @@ export default class ImageFileInfo {
   colorMapLength: number;
   colorMapPixelSize: number;
   extensionOffset: number = 0;
-  version: 1 | 2;
+  version: 1 | 2 = 1;
   topToBottom: boolean;
 
   authorName: string|undefined;
@@ -36,11 +36,18 @@ export default class ImageFileInfo {
   keyColor: { red: number, green: number, blue: number, alpha: number }|undefined;
   aspectRatio: string|undefined;
   gammaValue: string|undefined;
-  colorCorrectionOffset: number;
-  postageStampOffset: number;
-  scanLineOffset: number;
+  colorCorrectionOffset: number|undefined;
+  postageStampOffset: number|undefined;
+  scanLineOffset: number|undefined;
   attributesType: AttributesType|undefined;
 
+  get bytes() {
+    return this.#bytes;
+  }
+
+  get dataView() {
+    return this.#dataView;
+  }
 
   get arrayBuffer() {
     return this.#arrayBuffer;
@@ -48,30 +55,30 @@ export default class ImageFileInfo {
 
   set arrayBuffer(arrayBuffer: ArrayBuffer) {
     this.#arrayBuffer = arrayBuffer;
-    this.dataView = new DataView(arrayBuffer);
-    this.bytes = new Uint8Array(arrayBuffer);
+    this.#dataView = new DataView(arrayBuffer);
+    this.#bytes = new Uint8Array(arrayBuffer);
   }
 
   constructor(arrayBuffer: ArrayBuffer) {
     this.arrayBuffer = arrayBuffer;
-    this.imageIdentificationFieldLength = this.bytes[0];
-    this.colorMapType = this.bytes[1];
-    this.imageType = this.bytes[2];
-    this.colorMapOrigin = this.dataView.getUint16(3, true);
-    this.colorMapLength = this.dataView.getUint16(5, true);
-    this.colorMapPixelSize = this.bytes[7] / 8;
-    this.xOrigin = this.bytes[8];
-    this.yOrigin = this.bytes[10];
-    this.imageWidth = this.dataView.getUint16(12, true);
-    this.imageHeight = this.dataView.getUint16(14, true);
-    this.pixelSize = this.bytes[16] / 8;
-    this.pixelSizeRaw = this.bytes[16];
-    this.imageDescriptor = this.bytes[17];
+    this.imageIdentificationFieldLength = this.#bytes[0];
+    this.colorMapType = this.#bytes[1];
+    this.imageType = this.#bytes[2];
+    this.colorMapOrigin = this.#dataView.getUint16(3, true);
+    this.colorMapLength = this.#dataView.getUint16(5, true);
+    this.colorMapPixelSize = this.#bytes[7] / 8;
+    this.xOrigin = this.#bytes[8];
+    this.yOrigin = this.#bytes[10];
+    this.imageWidth = this.#dataView.getUint16(12, true);
+    this.imageHeight = this.#dataView.getUint16(14, true);
+    this.pixelSize = this.#bytes[16] / 8;
+    this.pixelSizeRaw = this.#bytes[16];
+    this.imageDescriptor = this.#bytes[17];
     this.imageDataFieldOffset = this.getImageDataFieldOffset();
     this.detectVersion();
 
     if (this.version === 2) {
-      this.extensionOffset = this.dataView.getUint32(this.dataView.byteLength - 26, true);
+      this.extensionOffset = this.#dataView.getUint32(this.#dataView.byteLength - 26, true);
 
       if (this.extensionOffset !== 0) {
         this.readExtension();
@@ -142,7 +149,7 @@ export default class ImageFileInfo {
   }
 
   readExtension() {
-    const extensionSize = this.dataView.getUint16(this.extensionOffset, true);
+    const extensionSize = this.#dataView.getUint16(this.extensionOffset, true);
 
     if (extensionSize !== 495) {
       console.warn('Not a valid TGA extension');
@@ -153,7 +160,7 @@ export default class ImageFileInfo {
     const textDecoder = new TextDecoder();
 
     const readString = (startOffset: number, endOffset: number): string => {
-      const buffer = this.bytes.subarray(startOffset, endOffset);
+      const buffer = this.#bytes.subarray(startOffset, endOffset);
       return textDecoder.decode(buffer);
     }
 
@@ -162,7 +169,7 @@ export default class ImageFileInfo {
       const endOffset = startOffset + numberOfShortsToRead * 2;
 
       for (let offset = startOffset; offset < endOffset; offset += 2) {
-        shorts.push(this.dataView.getUint16(offset, true));
+        shorts.push(this.#dataView.getUint16(offset, true));
       }
       
       return shorts;
@@ -174,8 +181,8 @@ export default class ImageFileInfo {
 
     this.softwareId = readString(EO + 426, EO + 466);
 
-    const softwareVersion = this.dataView.getUint16(EO + 467, true);
-    const softwareVersionLetter = String.fromCharCode(this.dataView.getUint8(EO + 469));
+    const softwareVersion = this.#dataView.getUint16(EO + 467, true);
+    const softwareVersionLetter = String.fromCharCode(this.#dataView.getUint8(EO + 469));
     const softwareVersionUnused = softwareVersion === 0 && softwareVersionLetter === ' ';
 
     if (!softwareVersionUnused) {
@@ -193,9 +200,9 @@ export default class ImageFileInfo {
 
     const jobTimeStrParts: string[] = [];
     const jobTimeObject = {
-      hour: this.dataView.getUint16(EO + 420, true),
-      minute: this.dataView.getUint16(EO + 422, true),
-      second: this.dataView.getUint16(EO + 424, true),
+      hour: this.#dataView.getUint16(EO + 420, true),
+      minute: this.#dataView.getUint16(EO + 422, true),
+      second: this.#dataView.getUint16(EO + 424, true),
     }
 
     for (const [key, value] of Object.entries(jobTimeObject)) {
@@ -208,10 +215,10 @@ export default class ImageFileInfo {
 
     this.jobTime = jobTimeStrParts.join(' ');
 
-    const blue = this.bytes[EO + 470];
-    const green = this.bytes[EO + 471];
-    const red = this.bytes[EO + 472];
-    const alpha = this.bytes[EO + 473];
+    const blue = this.#bytes[EO + 470];
+    const green = this.#bytes[EO + 471];
+    const red = this.#bytes[EO + 472];
+    const alpha = this.#bytes[EO + 473];
     this.keyColor = { red, green, blue, alpha};
 
     const [aspectRatioNumerator, aspectRatioDenominator] = readShorts(EO + 474, 2);
@@ -226,11 +233,11 @@ export default class ImageFileInfo {
       this.gammaValue = `${gammaNumerator}/${gammaDenominator}`;
     }
 
-    this.colorCorrectionOffset = this.dataView.getUint32(EO + 482, true);
-    this.postageStampOffset = this.dataView.getUint32(EO + 486, true);
-    this.scanLineOffset = this.dataView.getUint32(EO + 490, true);
+    this.colorCorrectionOffset = this.#dataView.getUint32(EO + 482, true);
+    this.postageStampOffset = this.#dataView.getUint32(EO + 486, true);
+    this.scanLineOffset = this.#dataView.getUint32(EO + 490, true);
 
-    const attr = this.dataView.getUint8(EO + 494);
+    const attr = this.#dataView.getUint8(EO + 494);
 
     if (AttributesType[attr]) {
       this.attributesType = attr;
