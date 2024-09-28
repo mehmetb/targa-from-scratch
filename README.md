@@ -1,8 +1,8 @@
-# Targa From Scratch
+# TGA for Web
 
 Reads a .tga file into a JavaScript `ArrayBuffer` and draws it on a canvas element. Works entirely in the browser.
 
-[Live Demo](https://mehmetb.github.io/targa-from-scratch-demo/)
+[Live Demo](https://mehmetb.github.io/tga-for-web-live-demo/)
 
 ## How to run
 

@@ -1,5 +1,5 @@
 {
-  "name": "@mehmetb/targa-from-scratch",
+  "name": "tga-for-web",
   "version": "1.0.0",
   "main": "index.js",
   "license": "GPL-3.0-or-later",
@@ -10,12 +10,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mehmetb/targa-from-scratch.git"
+    "url": "git+https://github.com/mehmetb/tga-for-web.git"
   },
   "bugs": {
-    "url": "https://github.com/mehmetb/targa-from-scratch/issues"
+    "url": "https://github.com/mehmetb/tga-for-web/issues"
   },
-  "homepage": "https://github.com/mehmetb/targa-from-scratch#readme",
+  "homepage": "https://github.com/mehmetb/tga-for-web#readme",
   "scripts": {
     "build": "esbuild src/index.ts --outdir=www/js --format=esm --bundle --target=ESNext",
     "start": "esbuild src/www-index.ts --outdir=www/js --format=esm --watch --bundle --target=ESNext --servedir=www"

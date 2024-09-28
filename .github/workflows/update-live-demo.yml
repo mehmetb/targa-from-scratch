@@ -19,9 +19,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-      name: Checkout @mehmetb/targa-from-scratch
+      name: Checkout @mehmetb/tga-for-web
       with:
-        path: 'targa-from-scratch'
+        path: 'tga-for-web'
 
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
@@ -29,7 +29,7 @@ jobs:
         node-version: 20.x
 
     - run: |
-        cd ./targa-from-scratch 
+        cd ./tga-for-web
         yarn install 
         yarn build 
       name: Create JS bundle
@@ -43,8 +43,8 @@ jobs:
 
     - name: Commit changes to @mehmetb/mehmetb.github.io (if any)
       run: |
-        cd ./targa-from-scratch
-        cp -r www/* ../mehmetb.github.io/targa-from-scratch-demo/ 
+        cd ./tga-for-web
+        cp -r www/* ../mehmetb.github.io/tga-for-web-live-demo/
         cd ../mehmetb.github.io
         if [[ -z $(git status -s) ]]; then
         echo "noting to commit";
@@ -52,6 +52,6 @@ jobs:
         git config user.name github-actions
         git config user.email github-actions@github.com
         git add .
-        git commit -m "Updated live demo of 'targa-from-scratch'"
+        git commit -m "Updated live demo of 'tga-for-web'"
         git push
         fi
