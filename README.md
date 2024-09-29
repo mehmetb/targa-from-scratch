@@ -4,9 +4,63 @@ Reads a .tga file into a JavaScript `ArrayBuffer` and draws it on a canvas eleme
 
 [Live Demo](https://mehmetb.github.io/tga-for-web-live-demo/)
 
-## How to run
+## Installation
+
+```bash
+npm install tga-for-web
+```
+
+## Usage
+
+Read a TGA file from an input element and draw it to a canvas:
+
+```js
+import { drawToCanvas } from 'tga-for-web';
+
+const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+
+fileInput.addEventListener('change', (event) => {
+  const file = fileInput.files?.item(0);
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = async (event) => {
+    const arrayBuffer = reader.result as ArrayBuffer;
+    const { duration, fileInfo } = await drawToCanvas(canvas, arrayBuffer);
+    console.log(`Image drawn in ${duration} ms`);
+    console.log(fileInfo);
+  };
+
+  reader.readAsArrayBuffer(file);
+});
+```
+
+Read a TGA file from a URL and draw it to a canvas:
+
+```js
+import { drawToCanvas } from 'tga-for-web';
+
+const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+const url = 'https://example.com/image.tga';
+
+fetch(url)
+  .then((response) => response.arrayBuffer())
+  .then((arrayBuffer) => drawToCanvas(canvas, arrayBuffer))
+  .then(({ duration, fileInfo }) => {
+    console.log(`Image drawn in ${duration} ms`);
+    console.log(fileInfo);
+  });
+
 
 ```
+
+## How to run the Live Demo locally?
+
+```
+git clone git@github.com:mehmetb/tga-for-web.git
+cd tga-for-web
 yarn install
 yarn start
 ```
@@ -21,6 +75,10 @@ Then go to http://127.0.0.1:8000 in your browser.
 - Run-length encoded, color-mapped images
 - Run-length encoded, true-color images
 - Run-length encoded, black and white images
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
 
 ## Credits
 
