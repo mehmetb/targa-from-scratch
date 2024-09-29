@@ -1,5 +1,14 @@
 {
   "name": "tga-for-web",
+  "description": "A library for reading TGA files in the browser",
+  "keywords": [
+    "tga",
+    "truevision",
+    "targa",
+    "browser",
+    "web",
+    "canvas"
+  ],
   "version": "1.0.0",
   "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
