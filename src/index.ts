@@ -83,6 +83,49 @@ function flipCanvasVertically(context: CanvasRenderingContext2D) {
   context.scale(1, -1);
 }
 
+/**
+ * The given TGA image is drawn to the given canvas. The given canvas is cleared and resized to the image size.
+ * If the image has transparency, a grid is drawn to show it.
+ * The duration of the operation and the image metadata are returned.
+ * 
+ * @example 
+ * // Read a TGA file from an input element and draw it to a canvas
+ * const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+ * const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+ * 
+ * fileInput.addEventListener('change', (event) => {
+ *   const file = fileInput.files?.item(0);
+ *   if (!file) return;
+ * 
+ *   const reader = new FileReader();
+ * 
+ *   reader.onload = async (event) => {
+ *     const arrayBuffer = reader.result as ArrayBuffer;
+ *     const { duration, fileInfo } = await drawToCanvas(canvas, arrayBuffer);
+ *     console.log(`Image drawn in ${duration} ms`);
+ *     console.log(fileInfo);
+ *   };
+ * 
+ *   reader.readAsArrayBuffer(file);
+ * });
+ * 
+ * @example
+ * // Read a TGA file from a URL and draw it to a canvas
+ * const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+ * const url = 'https://example.com/image.tga';
+ * 
+ * fetch(url)
+ *   .then((response) => response.arrayBuffer())
+ *   .then((arrayBuffer) => drawToCanvas(canvas, arrayBuffer))
+ *   .then(({ duration, fileInfo }) => {
+ *     console.log(`Image drawn in ${duration} ms`);
+ *     console.log(fileInfo);
+ *   });
+ * 
+ * @param canvas The canvas to draw the image to
+ * @param arrayBuffer The TGA image file as an ArrayBuffer
+ * @returns A promise that resolves to the duration of the operation and the image metadata
+ */
 export function drawToCanvas(canvas: HTMLCanvasElement, arrayBuffer: ArrayBuffer): Promise<{ duration: number, fileInfo: ImageFileInfo }> {
   const context = canvas.getContext('2d');
 
