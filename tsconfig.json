@@ -9,6 +9,7 @@
     "module": "ESNext",
     "target": "ESNext",
     "sourceMap": false,
+    "esModuleInterop": true,
     "declaration": true,
     "strict": true
   }

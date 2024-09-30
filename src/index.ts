@@ -53,8 +53,7 @@ function resetCanvas(context: CanvasRenderingContext2D, imageWidth: number, imag
   context.fillRect(0, 0, context.canvas.width, context.canvas.height);
 }
 
-function decodeTGA(tgaFile: TGAFile, context: CanvasRenderingContext2D): ImageData {
-  const imageData = context.createImageData(tgaFile.fileInfo.imageWidth, tgaFile.fileInfo.imageHeight);
+export function decodeTGAIntoImageData(tgaFile: TGAFile, imageData: ImageData) {
   imageData.data.fill(255);
 
   if (tgaFile.fileInfo.rleEncoded) {
@@ -74,7 +73,11 @@ function decodeTGA(tgaFile: TGAFile, context: CanvasRenderingContext2D): ImageDa
       }
     }
   }
+}
 
+function decodeTGA(tgaFile: TGAFile, context: CanvasRenderingContext2D): ImageData {
+  const imageData = context.createImageData(tgaFile.fileInfo.imageWidth, tgaFile.fileInfo.imageHeight);
+  decodeTGAIntoImageData(tgaFile, imageData);
   return imageData;
 }
 

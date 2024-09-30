@@ -1,0 +1,33 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "src/**"
+      - "tests/**"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "src/**"
+      - "tests/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      name: Checkout @mehmetb/tga-for-web
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'yarn'
+
+    - name: Install dependencies
+      run: yarn install
+
+    - name: Run tests
+      run: yarn test
