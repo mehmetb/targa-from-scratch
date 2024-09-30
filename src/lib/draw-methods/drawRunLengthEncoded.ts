@@ -99,7 +99,7 @@ export default function drawRunLengthEncoded(imageData: ImageData, tgaFile: TGAF
               data[canvasOffset] = 0;
               data[canvasOffset + 1] = 0;
               data[canvasOffset + 2] = 0;
-              data[canvasOffset + 1] = byte1 as number;
+              data[canvasOffset + 3] = byte2 as number;
             } else {
               data[canvasOffset] = byte3 as number;
               data[canvasOffset + 1] = byte2 as number;
