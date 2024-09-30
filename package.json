@@ -1,6 +1,14 @@
 {
   "name": "tga-for-web",
+  "version": "1.0.0",
   "description": "A library for reading TGA files in the browser",
+  "main": "dist/index.js",
+  "license": "GPL-3.0-or-later",
+  "author": {
+    "name": "Mehmet Baker",
+    "email": "mehmet@mehmetbaker.dev",
+    "url": "https://github.com/mehmetb"
+  },
   "keywords": [
     "tga",
     "truevision",
@@ -9,14 +17,6 @@
     "web",
     "canvas"
   ],
-  "version": "1.0.0",
-  "main": "dist/index.js",
-  "license": "GPL-3.0-or-later",
-  "author": {
-    "name": "Mehmet Baker",
-    "email": "mehmet@mehmetbaker.dev",
-    "url": "https://github.com/mehmetb"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mehmetb/tga-for-web.git"
