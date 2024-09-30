@@ -1,5 +1,7 @@
 # TGA for Web
 
+[![NPM Version](https://img.shields.io/npm/v/tga-for-web)](https://www.npmjs.com/package/tga-for-web)
+
 Reads a .tga file into a JavaScript `ArrayBuffer` and draws it on a canvas element. Works entirely in the browser.
 
 [Live Demo](https://mehmetb.github.io/tga-for-web-live-demo/)
