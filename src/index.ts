@@ -93,8 +93,8 @@ function flipCanvasVertically(context: CanvasRenderingContext2D) {
  * 
  * @example 
  * // Read a TGA file from an input element and draw it to a canvas
- * const canvas = document.getElementById('canvas') as HTMLCanvasElement;
- * const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+ * const canvas = document.getElementById('canvas');
+ * const fileInput = document.getElementById('fileInput');
  * 
  * fileInput.addEventListener('change', (event) => {
  *   const file = fileInput.files?.item(0);
@@ -103,7 +103,7 @@ function flipCanvasVertically(context: CanvasRenderingContext2D) {
  *   const reader = new FileReader();
  * 
  *   reader.onload = async (event) => {
- *     const arrayBuffer = reader.result as ArrayBuffer;
+ *     const arrayBuffer = reader.result;
  *     const { duration, fileInfo } = await drawToCanvas(canvas, arrayBuffer);
  *     console.log(`Image drawn in ${duration} ms`);
  *     console.log(fileInfo);
@@ -114,7 +114,7 @@ function flipCanvasVertically(context: CanvasRenderingContext2D) {
  * 
  * @example
  * // Read a TGA file from a URL and draw it to a canvas
- * const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+ * const canvas = document.getElementById('canvas');
  * const url = 'https://example.com/image.tga';
  * 
  * fetch(url)
