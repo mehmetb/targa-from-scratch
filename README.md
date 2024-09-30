@@ -4,7 +4,7 @@
 
 Reads a .tga file into a JavaScript `ArrayBuffer` and draws it on a canvas element. Works entirely in the browser.
 
-[Live Demo](https://mehmetb.github.io/tga-for-web-live-demo/)
+[Live Demo](https://mehmetbaker.dev/tga-for-web-live-demo/)
 
 ## Installation
 
