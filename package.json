@@ -31,7 +31,7 @@
   ],
   "scripts": {
     "build-for-npm": "tsc",
-    "build-live-demo": "esbuild src/www-index.ts --outdir=www/js --format=esm --bundle --target=ESNext",
+    "build-live-demo": "esbuild src/www-index.ts --outdir=www/js --format=esm --bundle --target=ESNext --define:window.IS_PRODUCTION=true",
     "start": "esbuild src/www-index.ts --outdir=www/js --format=esm --watch --bundle --target=ESNext --servedir=www"
   },
   "devDependencies": {

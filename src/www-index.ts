@@ -22,8 +22,11 @@ import { readFile, generateImageInformationTable } from './utils';
 import { drawToCanvas } from '.';
 import ImageFileInfo from './lib/ImageFileInfo';
 
-// Esbuild Live Reload
-new EventSource('/esbuild').addEventListener('change', () => location.reload());
+// @ts-ignore
+if (!window.IS_PRODUCTION) {
+  // Esbuild Live Reload
+  new EventSource('/esbuild').addEventListener('change', () => location.reload());
+}
 
 const fileInput = document.querySelector('input[type=file]') as HTMLInputElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
